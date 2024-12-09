@@ -1,0 +1,20 @@
+<!-- templates/workmanager/workzone_confirm_delete.html -->
+{% extends 'workmanager/base.html' %}
+
+{% block title %}Eliminar Zona de Trabajo{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Eliminar Zona de Trabajo</h2>
+    </div>
+    <div class="card-body">
+        <p>¿Estás seguro de que deseas eliminar la zona de trabajo "{{ object.name }}"?</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+            <a href="{% url 'workzone_list' %}" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

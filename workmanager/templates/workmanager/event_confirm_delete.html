@@ -1,0 +1,24 @@
+{% extends 'workmanager/base.html' %}
+
+{% block title %}Eliminar Evento{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Eliminar Evento</h2>
+    </div>
+    <div class="card-body">
+        <p>¿Estás seguro de que deseas eliminar el evento "{{ object.title }}"?</p>
+        <div class="mb-3">
+            <strong>Zona de trabajo:</strong> {{ object.work_zone.name }}<br>
+            <strong>Estado:</strong> {{ object.get_status_display }}<br>
+            <strong>Fecha límite:</strong> {{ object.deadline|date:"d/m/Y H:i" }}
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+            <a href="{% url 'event_list' %}" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

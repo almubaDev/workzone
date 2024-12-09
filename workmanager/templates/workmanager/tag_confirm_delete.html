@@ -1,0 +1,23 @@
+{% extends 'workmanager/base.html' %}
+
+{% block title %}Eliminar Etiqueta{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Eliminar Etiqueta</h2>
+    </div>
+    <div class="card-body">
+        <p>¿Estás seguro de que deseas eliminar la etiqueta "{{ object.name }}"?</p>
+        <div class="d-flex align-items-center mb-3">
+            <div class="color-preview me-2" style="width: 20px; height: 20px; border-radius: 50%; background-color: {{ object.color }}"></div>
+            <span>{{ object.name }}</span>
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+            <a href="{% url 'tag_list' %}" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

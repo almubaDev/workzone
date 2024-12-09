@@ -1,0 +1,211 @@
+{% extends 'workmanager/base.html' %}
+{% block title %}Eventos{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar con filtros -->
+    <div class="col-md-3">
+        <div class="card sticky-top" style="top: 20px;">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtros</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" id="filterForm">
+                    <!-- Zona de Trabajo -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Zona de Trabajo</label>
+                        <select name="work_zone" class="form-select" id="workZoneSelect">
+                            <option value="">Todas</option>
+                            {% for zone in work_zones %}
+                            <option value="{{ zone.id }}" {% if zone.id|stringformat:"s" == selected_work_zone %}selected{% endif %}>
+                                {{ zone.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Estado -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Estado</label>
+                        <div class="form-check-list">
+                            {% for value, label in status_choices %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       name="status" value="{{ value }}"
+                                       id="status_{{ value }}"
+                                       {% if value in selected_status %}checked{% endif %}>
+                                <label class="form-check-label" for="status_{{ value }}">
+                                    {{ label }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Prioridad -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Prioridad</label>
+                        <div class="form-check-list">
+                            {% for value, label in priority_choices %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       name="priority" value="{{ value }}"
+                                       id="priority_{{ value }}"
+                                       {% if value in selected_priority %}checked{% endif %}>
+                                <label class="form-check-label" for="priority_{{ value }}">
+                                    {{ label }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Etiquetas -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Etiquetas</label>
+                        <div class="form-check-list">
+                            {% for tag in all_tags %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       name="tag" value="{{ tag.id }}"
+                                       id="tag_{{ tag.id }}"
+                                       {% if tag.id|stringformat:"s" in selected_tag %}checked{% endif %}>
+                                <label class="form-check-label" for="tag_{{ tag.id }}"
+                                       style="color: {{ tag.color }}">
+                                    {{ tag.name }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Fechas -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Desde</label>
+                        <input type="date" class="form-control" name="date_from" 
+                               value="{{ selected_date_from }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Hasta</label>
+                        <input type="date" class="form-control" name="date_to" 
+                               value="{{ selected_date_to }}">
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i>Aplicar Filtros
+                        </button>
+                        {% if selected_status or selected_priority or selected_work_zone or selected_tag or selected_date_from or selected_date_to %}
+                        <a href="{% url 'event_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i>Limpiar Filtros
+                        </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de eventos -->
+    <div class="col-md-9">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Eventos</h1>
+            <a href="{% url 'event_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Nuevo Evento
+            </a>
+        </div>
+
+        <div class="row">
+            {% for event in events %}
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header {% if event.priority == 'HIGH' %}bg-danger text-white
+                                           {% elif event.priority == 'MEDIUM' %}bg-warning
+                                           {% else %}bg-info text-white{% endif %}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">{{ event.title }}</h5>
+                            <span class="badge bg-white {% if event.priority == 'MEDIUM' %}text-dark{% else %}text-{{ event.priority|lower }}{% endif %}">
+                                {{ event.get_priority_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">{{ event.description|truncatewords:30 }}</p>
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                <i class="fas fa-building me-1"></i>{{ event.work_zone.name }}
+                            </small>
+                        </div>
+                        <div class="mb-2">
+                            {% for tag in event.tags.all %}
+                            <span class="badge" style="background-color: {{ tag.color }}">{{ tag.name }}</span>
+                            {% endfor %}
+                        </div>
+                        <p class="mb-1">
+                            <span class="badge {% if event.status == 'COMPLETED' %}bg-success
+                                             {% elif event.status == 'IN_PROGRESS' %}bg-primary
+                                             {% else %}bg-secondary{% endif %}">
+                                {{ event.get_status_display }}
+                            </span>
+                        </p>
+                        <p class="mb-0">
+                            <i class="fas fa-clock me-1"></i>
+                            <span class="{% if event.is_overdue %}text-danger{% endif %}">
+                                {{ event.deadline|date:"d/m/Y H:i" }}
+                            </span>
+                        </p>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="d-flex justify-content-end">
+                            <a href="{% url 'event_detail' event.pk %}" 
+                               class="btn btn-link text-info p-1" 
+                               data-bs-toggle="tooltip" 
+                               title="Ver detalles">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{% url 'event_update' event.pk %}" 
+                               class="btn btn-link text-warning p-1 mx-2" 
+                               data-bs-toggle="tooltip" 
+                               title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{% url 'event_delete' event.pk %}" 
+                               class="btn btn-link text-danger p-1" 
+                               data-bs-toggle="tooltip" 
+                               title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>No hay eventos creados. ¡Crea uno nuevo!
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+<!-- JavaScript para actualizar etiquetas según la zona -->
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const workZoneSelect = document.getElementById('workZoneSelect');
+    
+    workZoneSelect.addEventListener('change', function() {
+        document.getElementById('filterForm').submit();
+    });
+
+    // Inicializar tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+});
+</script>
+{% endblock %}

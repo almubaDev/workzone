@@ -1,0 +1,21 @@
+<!-- templates/workmanager/workzone_detail.html -->
+{% extends 'workmanager/base.html' %}
+
+{% block title %}{{ workzone.name }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2>{{ workzone.name }}</h2>
+        <div class="btn-group">
+            <a href="{% url 'workzone_update' workzone.pk %}" class="btn btn-warning">Editar</a>
+            <a href="{% url 'workzone_delete' workzone.pk %}" class="btn btn-danger">Eliminar</a>
+        </div>
+    </div>
+    <div class="card-body">
+        <p><strong>Descripción:</strong></p>
+        <p>{{ workzone.description|linebreaks }}</p>
+        <p><strong>Fecha de creación:</strong> {{ workzone.created_at|date:"d/m/Y H:i" }}</p>
+    </div>
+</div>
+{% endblock %}

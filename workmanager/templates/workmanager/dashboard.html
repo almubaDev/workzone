@@ -1,0 +1,240 @@
+{% extends 'workmanager/base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1><i class="fa-solid fa-briefcase me-3"></i>Control de trabajo</h1>
+        <p class="text-muted">Bienvenido de nuevo, {{ user.username }}</p>
+    </div>
+</div>
+
+<!-- Tarjetas de Estadísticas -->
+<div class="row mb-4">
+    <!-- Zonas de Trabajo -->
+    <div class="col-md-3 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-2">Zonas de Trabajo</h6>
+                        <h3 class="mb-0">{{ workzones.count }}</h3>
+                    </div>
+                    <div class="rounded-circle bg-primary bg-opacity-10 p-3">
+                        <i class="fas fa-building text-primary"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a href="{% url 'workzone_list' %}" class="btn btn-sm btn-outline-primary">
+                        Ver detalles <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Eventos -->
+    <div class="col-md-3 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-2">Total Eventos</h6>
+                        <h3 class="mb-0">{{ events.count }}</h3>
+                    </div>
+                    <div class="rounded-circle bg-success bg-opacity-10 p-3">
+                        <i class="fas fa-calendar-check text-success"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a href="{% url 'event_list' %}" class="btn btn-sm btn-outline-success">
+                        Ver detalles <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Eventos Atrasados -->
+    <div class="col-md-3 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-2">Eventos Atrasados</h6>
+                        <h3 class="mb-0 {% if events_overdue > 0 %}text-danger{% endif %}">
+                            {{ events_overdue }}
+                        </h3>
+                    </div>
+                    <div class="rounded-circle bg-danger bg-opacity-10 p-3">
+                        <i class="fas fa-clock text-danger"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <span class="text-muted small">Requieren atención inmediata</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Etiquetas -->
+    <div class="col-md-3 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-2">Etiquetas</h6>
+                        <h3 class="mb-0">{{ tags.count }}</h3>
+                    </div>
+                    <div class="rounded-circle bg-info bg-opacity-10 p-3">
+                        <i class="fas fa-tags text-info"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a href="{% url 'tag_list' %}" class="btn btn-sm btn-outline-info">
+                        Ver detalles <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estado de Eventos -->
+<div class="row mb-4">
+    <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Estado de Eventos</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-0">
+                    <!-- No Iniciados -->
+                    <div class="col-4 text-center border-end">
+                        <div class="p-3">
+                            <div class="display-6 text-secondary">{{ events_not_started }}</div>
+                            <div class="text-muted small">No Iniciados</div>
+                        </div>
+                    </div>
+                    <!-- En Progreso -->
+                    <div class="col-4 text-center border-end">
+                        <div class="p-3">
+                            <div class="display-6 text-primary">{{ events_in_progress }}</div>
+                            <div class="text-muted small">En Progreso</div>
+                        </div>
+                    </div>
+                    <!-- Completados -->
+                    <div class="col-4 text-center">
+                        <div class="p-3">
+                            <div class="display-6 text-success">{{ events_completed }}</div>
+                            <div class="text-muted small">Completados</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones Rápidas -->
+    <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Acciones Rápidas</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'event_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Nuevo Evento
+                    </a>
+                    <a href="{% url 'workzone_create' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-building me-2"></i>Nueva Zona de Trabajo
+                    </a>
+                    <a href="{% url 'tag_create' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-tag me-2"></i>Nueva Etiqueta
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Eventos Próximos -->
+<div class="row">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-calendar me-2"></i>Eventos Próximos</h5>
+                <a href="{% url 'event_list' %}" class="btn btn-sm btn-outline-primary">
+                    Ver todos <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+            <div class="card-body">
+                {% if upcoming_events %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Título</th>
+                                    <th>Zona</th>
+                                    <th>Fecha límite</th>
+                                    <th>Prioridad</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for event in upcoming_events %}
+                                    <tr>
+                                        <td>
+                                            <i class="fas fa-calendar-day me-2 text-muted"></i>
+                                            {{ event.title }}
+                                        </td>
+                                        <td>
+                                            <i class="fas fa-building me-1 text-muted"></i>
+                                            {{ event.work_zone.name }}
+                                        </td>
+                                        <td class="{% if event.is_overdue %}text-danger{% endif %}">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ event.deadline|date:"d/m/Y H:i" }}
+                                        </td>
+                                        <td>
+                                            <span class="badge rounded-pill {% if event.priority == 'HIGH' %}bg-danger
+                                                     {% elif event.priority == 'MEDIUM' %}bg-warning
+                                                     {% else %}bg-info{% endif %}">
+                                                <i class="fas fa-flag me-1"></i>
+                                                {{ event.get_priority_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge rounded-pill {% if event.status == 'COMPLETED' %}bg-success
+                                                     {% elif event.status == 'IN_PROGRESS' %}bg-primary
+                                                     {% else %}bg-secondary{% endif %}">
+                                                <i class="fas {% if event.status == 'COMPLETED' %}fa-check
+                                                          {% elif event.status == 'IN_PROGRESS' %}fa-spinner
+                                                          {% else %}fa-hourglass-start{% endif %} me-1"></i>
+                                                {{ event.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'event_detail' event.pk %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-calendar-check text-muted mb-3" style="font-size: 2rem;"></i>
+                        <p class="text-muted mb-0">No hay eventos próximos programados.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+Las
