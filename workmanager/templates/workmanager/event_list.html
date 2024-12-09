@@ -125,7 +125,7 @@
                                            {% else %}bg-info text-white{% endif %}">
                         <div class="d-flex justify-content-between align-items-center">
                             <h5 class="card-title mb-0">{{ event.title }}</h5>
-                            <span class="badge bg-white {% if event.priority == 'MEDIUM' %}text-dark{% else %}text-{{ event.priority|lower }}{% endif %}">
+                            <span class="badge bg-white text-dark">
                                 {{ event.get_priority_display }}
                             </span>
                         </div>
@@ -191,6 +191,7 @@
     </div>
 </div>
 {% endblock %}
+
 <!-- JavaScript para actualizar etiquetas según la zona -->
 {% block extra_js %}
 <script>
@@ -209,3 +210,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+

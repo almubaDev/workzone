@@ -107,25 +107,59 @@ class EventListView(LoginRequiredMixin, ListView):
     template_name = 'workmanager/event_list.html'
     context_object_name = 'events'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        
+        # Obtener la zona de trabajo seleccionada
+        selected_workzone = self.request.GET.get('work_zone')
+        
+        # Opciones para los filtros
+        context['work_zones'] = WorkZone.objects.filter(created_by=user)
+        
+        # Filtrar etiquetas según la zona seleccionada
+        if selected_workzone:
+            context['all_tags'] = Tag.objects.filter(
+                created_by=user,
+                work_zone_id=selected_workzone
+            )
+        else:
+            context['all_tags'] = Tag.objects.filter(created_by=user)
+            
+        context['status_choices'] = Event.STATUS_CHOICES
+        context['priority_choices'] = Event.PRIORITY_CHOICES
+        
+        # Valores actuales de los filtros
+        context.update({
+            'selected_status': self.request.GET.getlist('status'),  # Cambiado para múltiples selecciones
+            'selected_priority': self.request.GET.getlist('priority'),
+            'selected_work_zone': selected_workzone,
+            'selected_tag': self.request.GET.getlist('tag'),
+            'selected_date_from': self.request.GET.get('date_from', ''),
+            'selected_date_to': self.request.GET.get('date_to', '')
+        })
+        
+        return context
+
     def get_queryset(self):
         queryset = Event.objects.filter(created_by=self.request.user)
         
         # Filtros
-        status = self.request.GET.get('status')
-        priority = self.request.GET.get('priority')
+        statuses = self.request.GET.getlist('status')
+        priorities = self.request.GET.getlist('priority')
         work_zone = self.request.GET.get('work_zone')
-        tag = self.request.GET.get('tag')
+        tags = self.request.GET.getlist('tag')
         date_from = self.request.GET.get('date_from')
         date_to = self.request.GET.get('date_to')
 
-        if status:
-            queryset = queryset.filter(status=status)
-        if priority:
-            queryset = queryset.filter(priority=priority)
+        if statuses:
+            queryset = queryset.filter(status__in=statuses)
+        if priorities:
+            queryset = queryset.filter(priority__in=priorities)
         if work_zone:
             queryset = queryset.filter(work_zone_id=work_zone)
-        if tag:
-            queryset = queryset.filter(tags__id=tag)
+        if tags:
+            queryset = queryset.filter(tags__id__in=tags)
         if date_from:
             try:
                 date_from = dt.strptime(date_from, '%Y-%m-%d').date()
@@ -139,29 +173,7 @@ class EventListView(LoginRequiredMixin, ListView):
             except ValueError:
                 pass
 
-        return queryset.order_by('deadline')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user = self.request.user
-        
-        # Opciones para los filtros
-        context['work_zones'] = WorkZone.objects.filter(created_by=user)
-        context['all_tags'] = Tag.objects.filter(created_by=user)
-        context['status_choices'] = Event.STATUS_CHOICES
-        context['priority_choices'] = Event.PRIORITY_CHOICES
-        
-        # Valores actuales de los filtros
-        context.update({
-            'selected_status': self.request.GET.get('status', ''),
-            'selected_priority': self.request.GET.get('priority', ''),
-            'selected_work_zone': self.request.GET.get('work_zone', ''),
-            'selected_tag': self.request.GET.get('tag', ''),
-            'selected_date_from': self.request.GET.get('date_from', ''),
-            'selected_date_to': self.request.GET.get('date_to', '')
-        })
-        
-        return context
+        return queryset.distinct().order_by('deadline')
 
 class EventCreateView(LoginRequiredMixin, CreateView):
     model = Event
