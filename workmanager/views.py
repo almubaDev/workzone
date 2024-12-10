@@ -4,7 +4,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.contrib import messages
-from .models import WorkZone, Tag, Event, LogEntry, TodoItem
+from .models import WorkZone, Tag, Event, LogEntry, TodoItem, Notification
 from .forms import WorkZoneForm, TagForm, EventForm, LogEntryForm, TodoItemForm
 from django.contrib.auth.views import LoginView, LogoutView
 from django.views.generic import TemplateView
@@ -13,6 +13,9 @@ from django.utils.formats import date_format
 from datetime import datetime as dt
 from django.http import JsonResponse
 from django.urls import reverse
+from .utils import generate_notifications
+from django.db.models import Count, Q, F
+from datetime import timedelta
 import logging
 
 logger = logging.getLogger(__name__)
@@ -107,42 +110,16 @@ class EventListView(LoginRequiredMixin, ListView):
     template_name = 'workmanager/event_list.html'
     context_object_name = 'events'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user = self.request.user
-        
-        # Obtener la zona de trabajo seleccionada
-        selected_workzone = self.request.GET.get('work_zone')
-        
-        # Opciones para los filtros
-        context['work_zones'] = WorkZone.objects.filter(created_by=user)
-        
-        # Filtrar etiquetas según la zona seleccionada
-        if selected_workzone:
-            context['all_tags'] = Tag.objects.filter(
-                created_by=user,
-                work_zone_id=selected_workzone
-            )
-        else:
-            context['all_tags'] = Tag.objects.filter(created_by=user)
-            
-        context['status_choices'] = Event.STATUS_CHOICES
-        context['priority_choices'] = Event.PRIORITY_CHOICES
-        
-        # Valores actuales de los filtros
-        context.update({
-            'selected_status': self.request.GET.getlist('status'),  # Cambiado para múltiples selecciones
-            'selected_priority': self.request.GET.getlist('priority'),
-            'selected_work_zone': selected_workzone,
-            'selected_tag': self.request.GET.getlist('tag'),
-            'selected_date_from': self.request.GET.get('date_from', ''),
-            'selected_date_to': self.request.GET.get('date_to', '')
-        })
-        
-        return context
-
     def get_queryset(self):
         queryset = Event.objects.filter(created_by=self.request.user)
+        
+        # Búsqueda por texto
+        search_query = self.request.GET.get('search', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(title__icontains=search_query) |
+                Q(description__icontains=search_query)
+            )
         
         # Filtros
         statuses = self.request.GET.getlist('status')
@@ -175,6 +152,42 @@ class EventListView(LoginRequiredMixin, ListView):
 
         return queryset.distinct().order_by('deadline')
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        
+        # Obtener la zona de trabajo seleccionada
+        selected_workzone = self.request.GET.get('work_zone')
+        
+        # Opciones para los filtros
+        context['work_zones'] = WorkZone.objects.filter(created_by=user)
+        
+        # Filtrar etiquetas según la zona seleccionada
+        if selected_workzone:
+            context['all_tags'] = Tag.objects.filter(
+                created_by=user,
+                work_zone_id=selected_workzone
+            )
+        else:
+            context['all_tags'] = Tag.objects.filter(created_by=user)
+            
+        context['status_choices'] = Event.STATUS_CHOICES
+        context['priority_choices'] = Event.PRIORITY_CHOICES
+        
+        # Valores actuales de los filtros
+        context.update({
+            'selected_status': self.request.GET.getlist('status'),
+            'selected_priority': self.request.GET.getlist('priority'),
+            'selected_work_zone': selected_workzone,
+            'selected_tag': self.request.GET.getlist('tag'),
+            'selected_date_from': self.request.GET.get('date_from', ''),
+            'selected_date_to': self.request.GET.get('date_to', ''),
+            'search_query': self.request.GET.get('search', '')
+        })
+        
+        return context
+    
+    
 class EventCreateView(LoginRequiredMixin, CreateView):
     model = Event
     form_class = EventForm
@@ -236,34 +249,95 @@ class CustomLoginView(LoginView):
     
     
 #DASHBOARD    
+
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'workmanager/dashboard.html'
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user = self.request.user
+        today = timezone.now()
         
-        # Work Zones
-        context['workzones'] = WorkZone.objects.filter(created_by=user)
+        # Eventos por estado
+        events_by_status = Event.objects.filter(
+            created_by=user
+        ).values('status').annotate(
+            count=Count('id')
+        ).order_by('status')
         
-        # Events
-        events = Event.objects.filter(created_by=user)
-        context['events'] = events
-        context['events_not_started'] = events.filter(status='NOT_STARTED').count()
-        context['events_in_progress'] = events.filter(status='IN_PROGRESS').count()
-        context['events_completed'] = events.filter(status='COMPLETED').count()
-        context['events_overdue'] = events.filter(deadline__lt=timezone.now()).exclude(status='COMPLETED').count()
+        # Eventos por zona de trabajo
+        events_by_workzone = Event.objects.filter(
+            created_by=user
+        ).values('work_zone__name').annotate(
+            count=Count('id')
+        ).order_by('-count')
         
-        # Upcoming events (próximos 7 días)
-        context['upcoming_events'] = events.filter(
-            deadline__gte=timezone.now(),
-            deadline__lte=timezone.now() + timezone.timedelta(days=7)
-        ).order_by('deadline')[:5]
-        
-        # Tags
-        context['tags'] = Tag.objects.filter(created_by=user)
+        # Eventos prioritarios
+        context.update({
+            # Estadísticas generales
+            'total_events': Event.objects.filter(created_by=user).count(),
+            'events_completed': Event.objects.filter(created_by=user, status='COMPLETED').count(),
+            'events_in_progress': Event.objects.filter(created_by=user, status='IN_PROGRESS').count(),
+            'events_not_started': Event.objects.filter(created_by=user, status='NOT_STARTED').count(),
+            
+            # Eventos urgentes y próximos
+            'urgent_events': Event.objects.filter(
+                created_by=user,
+                priority='URGENT',
+                status__in=['NOT_STARTED', 'IN_PROGRESS']
+            ).order_by('deadline')[:5],
+            
+            'upcoming_events': Event.objects.filter(
+                created_by=user,
+                deadline__range=[today, today + timedelta(days=3)],
+                status__in=['NOT_STARTED', 'IN_PROGRESS']
+            ).order_by('deadline')[:5],
+            
+            'overdue_events': Event.objects.filter(
+                created_by=user,
+                deadline__lt=today,
+                status__in=['NOT_STARTED', 'IN_PROGRESS']
+            ).order_by('deadline')[:5],
+            
+            # Datos para gráficos
+            'events_by_status': list(events_by_status),
+            'events_by_workzone': list(events_by_workzone),
+            
+            # Actividad reciente
+            'recent_logs': LogEntry.objects.filter(
+                created_by=user
+            ).select_related('event').order_by('-created_at')[:5],
+            
+            'completed_todos': TodoItem.objects.filter(
+                event__created_by=user,
+                is_completed=True
+            ).select_related('event').order_by('-completed_at')[:5],
+            
+            # Calculamos el porcentaje de cumplimiento
+            'completion_rate': self.calculate_completion_rate(user),
+            
+            # Mini calendario
+            'calendar_events': Event.objects.filter(
+                created_by=user,
+                deadline__range=[today.replace(day=1), (today + timedelta(days=32)).replace(day=1)]
+            ).values('id', 'title', 'deadline', 'priority')
+        })
         
         return context
+    
+    def calculate_completion_rate(self, user):
+        total_events = Event.objects.filter(created_by=user).count()
+        
+        if total_events == 0:
+            return 0  # Si no hay eventos, retorna 0%
+        
+        completed_events = Event.objects.filter(
+            created_by=user,
+            status='COMPLETED'
+        ).count()
+        
+        # Calcular porcentaje y redondear a entero
+        return int((completed_events / total_events) * 100)
     
     
 #WORKZONE
@@ -387,3 +461,65 @@ class GetTagsByWorkzone(LoginRequiredMixin, View):
             'status': 'success',
             'tags': list(tags)
         })
+        
+#NOTIFICATIONS
+class NotificationListView(LoginRequiredMixin, ListView):
+    model = Notification
+    template_name = 'workmanager/notification_list.html'
+    context_object_name = 'notifications'
+
+    def get_queryset(self):
+        # Generar notificaciones antes de mostrar la lista
+        generate_notifications(self.request.user)
+        return Notification.objects.filter(user=self.request.user).order_by('-created_at')
+
+class MarkNotificationReadView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        notification = get_object_or_404(Notification, pk=pk, user=request.user)
+        notification.read = True
+        notification.save()
+        return JsonResponse({'status': 'success'})
+
+class MarkAllNotificationsReadView(LoginRequiredMixin, View):
+    def post(self, request):
+        Notification.objects.filter(user=request.user).update(read=True)
+        return JsonResponse({'status': 'success'})
+    
+
+#CALENDAR
+class CalendarView(LoginRequiredMixin, TemplateView):
+    template_name = 'workmanager/calendar.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['work_zones'] = WorkZone.objects.filter(created_by=self.request.user)
+        return context
+
+class CalendarEventsAPI(LoginRequiredMixin, View):
+    def get(self, request):
+        events = Event.objects.filter(created_by=request.user)
+        
+        if work_zone := request.GET.get('work_zone'):
+            events = events.filter(work_zone_id=work_zone)
+
+        calendar_events = []
+        for event in events:
+            calendar_events.append({
+                'id': event.id,
+                'title': event.title,
+                'start': event.deadline.isoformat(),
+                'end': event.deadline.isoformat(),
+                'url': reverse('event_detail', args=[event.id]),
+                'className': [
+                    f'priority-{event.priority.lower()}',
+                    f'status-{event.status.lower()}'
+                ],
+                'extendedProps': {
+                    'description': event.description,
+                    'workZone': event.work_zone.name,
+                    'status': event.get_status_display(),
+                    'priority': event.priority
+                }
+            })
+        
+        return JsonResponse(calendar_events, safe=False)

@@ -88,3 +88,387 @@
     top: 1rem;
     z-index: 1020;
 }
+
+
+
+/* Animación para notificaciones nuevas */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.notification-item.new {
+    animation: fadeIn 0.5s ease;
+}
+
+/* static/workmanager/css/styles.css */
+.notification-dropdown {
+    width: 450px !important;  /* Aumentado de 350px a 450px */
+    max-width: 90vw;  /* Para asegurar responsividad en móviles */
+    padding: 0;
+}
+
+/* Ajustes adicionales para mejorar la presentación */
+.notification-item .small {
+    font-size: 0.875rem;  /* Texto un poco más grande */
+}
+
+.notification-body {
+    max-height: 500px;  /* También aumentamos la altura máxima */
+    overflow-y: auto;
+    padding: 14px;
+}
+
+/* Mejora el espaciado interno de los items */
+.dropdown-item.notification-item {
+    padding: 0.75rem 1rem;
+}
+
+/* Asegura que el mensaje tenga suficiente espacio */
+.notification-item .flex-grow-1 p {
+    margin-right: 1rem;  /* Espacio para el botón de marcar como leído */
+}
+
+.notification-item.unread {
+    background-color: #f8f9fa;
+    border-left-color: #0d6efd;
+}
+
+.notification-item:hover {
+    background-color: #f0f0f0;
+}
+
+.notification-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dropdown-item.notification-item {
+    padding: 0.5rem 1rem;
+    white-space: normal;
+}
+
+#notificationBadge {
+    font-size: 0.65rem;
+    padding: 0.25em 0.6em;
+}
+
+.form-check-list {
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+}
+
+.completed-event {
+    opacity: 0.6;
+}
+
+.completed-event:hover {
+    opacity: 1;
+}
+
+.completed-event .card-body {
+    position: relative;
+}
+
+.completed-event .badge {
+    transition: opacity 0.3s ease;
+}
+
+.completed-event:hover .badge {
+    opacity: 1 !important;
+}
+
+.completed-event .card-header {
+    position: relative;
+}
+
+.completed-event .card-header::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.1);
+}
+
+.completed-event .fa-check-circle {
+    color: #fff;
+    opacity: 0.9;
+}
+
+.sticky-top {
+    top: 1rem;
+    z-index: 1020;
+}
+
+.input-group .btn-outline-secondary {
+    border-color: #ced4da;
+}
+
+.input-group .btn-outline-secondary:hover {
+    background-color: #e9ecef;
+    border-color: #ced4da;
+}
+
+.form-control:focus + .btn-outline-secondary {
+    border-color: #86b7fe;
+}
+
+#calendar {
+    height: calc(100vh - 200px);
+    min-height: 600px;
+}
+
+.fc {
+    background-color: white;
+}
+
+.fc .fc-toolbar {
+    padding: 1rem;
+}
+
+/* Espacio entre grupos de botones */
+.fc .fc-toolbar-chunk {
+    display: flex;
+    gap: 0.75rem; /* Espacio entre botones */
+    align-items: center;
+}
+
+/* Estilos base para todos los botones del calendario */
+.fc .fc-button {
+    background-color: #ffffff !important;
+    border: 1px solid #dee2e6 !important;
+    color: #212529 !important;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+    box-shadow: none !important;
+}
+
+/* Botones de navegación (prev/next) */
+.fc .fc-prev-button,
+.fc .fc-next-button {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50% !important;
+    margin-left: 8px !important;
+}
+
+/* Añadir íconos a los botones de navegación */
+.fc .fc-prev-button:before {
+    content: '\f104'; /* Código del ícono de flecha izquierda de FontAwesome */
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+}
+
+.fc .fc-next-button:before {
+    content: '\f105'; /* Código del ícono de flecha derecha de FontAwesome */
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+}
+
+/* Hover para todos los botones */
+.fc .fc-button:hover {
+    background-color: #f8f9fa !important;
+    border-color: #dee2e6 !important;
+    color: #0d6efd !important;
+}
+
+/* Estilo para el botón "hoy" */
+.fc .fc-today-button {
+    font-weight: 500;
+    border-radius: 0.25rem !important;
+}
+
+/* Estilo para los botones de vista (mes, semana, día) */
+.fc .fc-button-group {
+    gap: 5px;
+}
+
+.fc .fc-button-group .fc-button {
+    border-radius: 0.25rem !important;
+}
+
+/* Estilo para el botón activo */
+.fc .fc-button-active {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: #ffffff !important;
+}
+
+/* Hover para los botones de navegación */
+.fc .fc-prev-button:hover,
+.fc .fc-next-button:hover {
+    background-color: #e9ecef !important;
+    transform: scale(1.05);
+}
+
+/* Tooltip personalizado para los botones de navegación */
+/* .fc .fc-prev-button::after {
+    content: 'Mes anterior';
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    background-color: #000;
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 3px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+} */
+
+/* .fc .fc-next-button::after {
+    content: 'Mes siguiente';
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    background-color: #000;
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 3px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    margin-left: 6px;
+} */
+
+.fc .fc-prev-button:hover::after,
+.fc .fc-next-button:hover::after {
+    opacity: 0.9;
+}
+
+/* Título del calendario */
+.fc .fc-toolbar-title {
+    font-size: 1.25rem;
+    font-weight: 500;
+    text-transform: capitalize;
+    margin: 0 1rem;
+}
+
+.fc .fc-button {
+    background-color: #f8f9fa !important;
+    border-color: #dee2e6 !important;
+    color: #212529 !important;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.9rem;
+    box-shadow: none !important;
+}
+
+.fc .fc-button:hover {
+    background-color: #e9ecef !important;
+    border-color: #dee2e6 !important;
+    color: #212529 !important;
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+    background-color: #0d6efd !important;
+    border-color: #0b5ed7 !important;
+    color: #fff !important;
+}
+
+.fc .fc-today-button {
+    background-color: #0d6efd !important;
+    border-color: #0b5ed7 !important;
+    color: #fff !important;
+}
+
+.fc .fc-prev-button,
+.fc .fc-next-button {
+    padding: 0.375rem 0.5rem;
+}
+
+.priority-high {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: white !important;
+}
+
+.priority-medium {
+    background-color: #ffc107 !important;
+    border-color: #ffc107 !important;
+    color: black !important;
+}
+
+.priority-low {
+    background-color: #198754 !important;
+    border-color: #198754 !important;
+    color: white !important;
+}
+
+.priority-urgent {
+    background-color: #dc3545 !important;
+    border-color: #ffc107 !important;
+    color: white !important;
+    border-width: 2px !important;
+}
+
+.status-completed {
+    opacity: 0.6;
+    text-decoration: line-through;
+}
+
+.fc-event {
+    cursor: pointer;
+    padding: 2px 4px;
+    margin: 2px 0;
+    border-radius: 3px;
+}
+
+.fc-day-today {
+    background-color: rgba(13, 110, 253, 0.1) !important;
+}
+
+.progress {
+    background-color: #e9ecef;
+}
+
+.progress-bar {
+    transition: width 0.6s ease;
+}
+
+#miniCalendar {
+    font-size: 0.8rem;
+}
+
+.fc-daygrid-day-number {
+    font-size: 0.8rem;
+}
+
+.activity-timeline .timeline-item {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.activity-timeline .timeline-item:before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 2px;
+    background-color: #e9ecef;
+}
+
+.dashboard-stat-card {
+    transition: transform 0.3s ease;
+}
+
+.dashboard-stat-card:hover {
+    transform: translateY(-5px);
+}

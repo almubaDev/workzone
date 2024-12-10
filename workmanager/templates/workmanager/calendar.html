@@ -1,0 +1,150 @@
+{% extends 'workmanager/base.html' %}
+{% block title %}Calendario{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Filtros -->
+    <div class="col-md-3 mb-4">
+        <div class="card sticky-top" style="top: 20px;">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtros</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Zona de Trabajo</label>
+                    <select id="work_zone_filter" class="form-select">
+                        <option value="">Todas las zonas</option>
+                        {% for zone in work_zones %}
+                        <option value="{{ zone.id }}">{{ zone.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendario -->
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-body">
+                <div id="calendar"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+        var workZoneSelect = document.getElementById('work_zone_filter');
+    
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            themeSystem: 'bootstrap5',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            locale: 'es',
+            firstDay: 1, // Lunes como primer día
+            buttonText: {
+                today: 'Hoy',
+                month: 'Mes',
+                week: 'Semana',
+                day: 'Día'
+            },
+            slotMinTime: '07:00:00',
+            slotMaxTime: '21:00:00',
+            allDaySlot: true,
+            allDayText: 'Todo el día',
+            dayMaxEvents: true,
+            events: function(fetchInfo, successCallback, failureCallback) {
+                const params = new URLSearchParams({
+                    start: fetchInfo.startStr,
+                    end: fetchInfo.endStr,
+                    work_zone: workZoneSelect.value || ''
+                });
+    
+                fetch(`/api/calendar-events/?${params}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Eventos cargados:', data); // Para debugging
+                    successCallback(data.map(event => ({
+                        id: event.id,
+                        title: event.title,
+                        start: event.start,
+                        end: event.end || event.start,
+                        url: event.url,
+                        classNames: event.className,
+                        backgroundColor: getPriorityColor(event.extendedProps.priority),
+                        borderColor: getPriorityColor(event.extendedProps.priority),
+                        textColor: getTextColor(event.extendedProps.priority),
+                        extendedProps: event.extendedProps
+                    })));
+                })
+                .catch(error => {
+                    console.error('Error cargando eventos:', error);
+                    failureCallback(error);
+                });
+            },
+            eventDidMount: function(info) {
+                // Configurar tooltip
+                new bootstrap.Tooltip(info.el, {
+                    title: getTooltipContent(info.event),
+                    html: true,
+                    placement: 'top',
+                    container: 'body'
+                });
+            }
+        });
+    
+        calendar.render();
+    
+        // Función para obtener el color según la prioridad
+        function getPriorityColor(priority) {
+            const colors = {
+                'URGENT': '#dc3545',
+                'HIGH': '#ffc107',
+                'MEDIUM': '#0dcaf0',
+                'LOW': '#198754'
+            };
+            return colors[priority] || '#6c757d';
+        }
+    
+        // Función para obtener el color del texto según la prioridad
+        function getTextColor(priority) {
+            const darkTextPriorities = ['HIGH', 'MEDIUM'];
+            return darkTextPriorities.includes(priority) ? '#000' : '#fff';
+        }
+    
+        // Función para generar el contenido del tooltip
+        function getTooltipContent(event) {
+            const props = event.extendedProps;
+            return `
+                <div class="event-tooltip">
+                    <strong>${event.title}</strong><br>
+                    ${props.description ? `<small>${props.description}</small><br>` : ''}
+                    <small>
+                        <i class="fas fa-building me-1"></i>${props.workZone}<br>
+                        <i class="fas fa-flag me-1"></i>${props.priority}<br>
+                        <i class="fas fa-tasks me-1"></i>${props.status}
+                    </small>
+                </div>
+            `;
+        }
+    
+        // Actualizar eventos cuando cambie el filtro de zona
+        workZoneSelect.addEventListener('change', function() {
+            calendar.refetchEvents();
+        });
+    });
+</script>
+{% endblock %}

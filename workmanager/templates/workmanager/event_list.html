@@ -11,6 +11,26 @@
             </div>
             <div class="card-body">
                 <form method="get" id="filterForm">
+                    <!-- Búsqueda -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Buscar</label>
+                        <div class="input-group">
+                            <input type="text" 
+                                   class="form-control" 
+                                   name="search" 
+                                   value="{{ search_query }}"
+                                   placeholder="Buscar en título o descripción...">
+                            {% if search_query %}
+                            <button type="button" 
+                                    class="btn btn-outline-secondary" 
+                                    onclick="clearSearch()"
+                                    title="Limpiar búsqueda">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+
                     <!-- Zona de Trabajo -->
                     <div class="mb-3">
                         <label class="form-label fw-bold">Zona de Trabajo</label>
@@ -96,7 +116,7 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-search me-1"></i>Aplicar Filtros
                         </button>
-                        {% if selected_status or selected_priority or selected_work_zone or selected_tag or selected_date_from or selected_date_to %}
+                        {% if selected_status or selected_priority or selected_work_zone or selected_tag or selected_date_from or selected_date_to or search_query %}
                         <a href="{% url 'event_list' %}" class="btn btn-secondary">
                             <i class="fas fa-times me-1"></i>Limpiar Filtros
                         </a>
@@ -110,7 +130,14 @@
     <!-- Lista de eventos -->
     <div class="col-md-9">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>Eventos</h1>
+            <div>
+                <h1>Eventos</h1>
+                {% if search_query %}
+                <div class="text-muted">
+                    <small>Búsqueda actual: "{{ search_query }}"</small>
+                </div>
+                {% endif %}
+            </div>
             <a href="{% url 'event_create' %}" class="btn btn-primary">
                 <i class="fas fa-plus me-1"></i>Nuevo Evento
             </a>
@@ -119,18 +146,29 @@
         <div class="row">
             {% for event in events %}
             <div class="col-md-6 mb-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-header {% if event.priority == 'HIGH' %}bg-danger text-white
-                                           {% elif event.priority == 'MEDIUM' %}bg-warning
-                                           {% else %}bg-info text-white{% endif %}">
+                <div class="card h-100 shadow-sm {% if event.status == 'COMPLETED' %}completed-event{% endif %}">
+                    <div class="card-header {% if event.status == 'COMPLETED' %}bg-secondary text-white
+                                           {% elif event.priority == 'URGENT' %}bg-danger text-white
+                                           {% elif event.priority == 'HIGH' %}bg-warning text-dark
+                                           {% elif event.priority == 'MEDIUM' %}bg-info text-white
+                                           {% else %}bg-success text-white{% endif %}">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="card-title mb-0">{{ event.title }}</h5>
-                            <span class="badge bg-white text-dark">
+                            <h5 class="card-title mb-0">
+                                {% if event.status == 'COMPLETED' %}
+                                    <i class="fas fa-check-circle me-2"></i>
+                                {% endif %}
+                                {{ event.title }}
+                            </h5>
+                            <span class="badge bg-white {% if event.status == 'COMPLETED' %}text-secondary
+                                                      {% elif event.priority == 'HIGH' %}text-dark
+                                                      {% elif event.priority == 'URGENT' %}text-danger
+                                                      {% elif event.priority == 'MEDIUM' %}text-info
+                                                      {% else %}text-success{% endif %}">
                                 {{ event.get_priority_display }}
                             </span>
                         </div>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body {% if event.status == 'COMPLETED' %}text-muted{% endif %}">
                         <p class="card-text">{{ event.description|truncatewords:30 }}</p>
                         <div class="mb-2">
                             <small class="text-muted">
@@ -139,19 +177,25 @@
                         </div>
                         <div class="mb-2">
                             {% for tag in event.tags.all %}
-                            <span class="badge" style="background-color: {{ tag.color }}">{{ tag.name }}</span>
+                            <span class="badge {% if event.status == 'COMPLETED' %}opacity-50{% endif %}"
+                                  style="background-color: {{ tag.color }}">{{ tag.name }}</span>
                             {% endfor %}
                         </div>
-                        <p class="mb-1">
-                            <span class="badge {% if event.status == 'COMPLETED' %}bg-success
-                                             {% elif event.status == 'IN_PROGRESS' %}bg-primary
-                                             {% else %}bg-secondary{% endif %}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge {% if event.status == 'COMPLETED' %}bg-secondary
+                                            {% elif event.status == 'IN_PROGRESS' %}bg-primary
+                                            {% else %}bg-secondary{% endif %}">
                                 {{ event.get_status_display }}
                             </span>
-                        </p>
-                        <p class="mb-0">
+                            {% if event.status == 'COMPLETED' %}
+                            <small class="text-muted">
+                                <i class="fas fa-check me-1"></i>Completado el {{ event.last_updated|date:"d/m/Y H:i" }}
+                            </small>
+                            {% endif %}
+                        </div>
+                        <p class="mb-0 mt-2">
                             <i class="fas fa-clock me-1"></i>
-                            <span class="{% if event.is_overdue %}text-danger{% endif %}">
+                            <span class="{% if event.is_overdue and event.status != 'COMPLETED' %}text-danger{% endif %}">
                                 {{ event.deadline|date:"d/m/Y H:i" }}
                             </span>
                         </p>
@@ -192,22 +236,27 @@
 </div>
 {% endblock %}
 
-<!-- JavaScript para actualizar etiquetas según la zona -->
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const workZoneSelect = document.getElementById('workZoneSelect');
-    
-    workZoneSelect.addEventListener('change', function() {
-        document.getElementById('filterForm').submit();
-    });
-
     // Inicializar tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl)
     });
+
+    // Manejar cambio de workzone para actualizar etiquetas
+    const workZoneSelect = document.getElementById('workZoneSelect');
+    
+    workZoneSelect.addEventListener('change', function() {
+        document.getElementById('filterForm').submit();
+    });
 });
+
+function clearSearch() {
+    const searchInput = document.querySelector('input[name="search"]');
+    searchInput.value = '';
+    document.getElementById('filterForm').submit();
+}
 </script>
 {% endblock %}
-

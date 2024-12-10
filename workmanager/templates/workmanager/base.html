@@ -1,4 +1,5 @@
 {% load static %}
+{% load notification_tags %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -7,7 +8,13 @@
     <title>{% block title %}Work Manager{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid/main.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid/main.css" rel="stylesheet">
     <link href="{% static 'workmanager/css/styles.css' %}" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales-all.min.js"></script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark">
@@ -23,6 +30,11 @@
                             <a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="{% url 'calendar' %}">
+                                <i class="fas fa-calendar-alt me-1"></i>Calendario
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="{% url 'workzone_list' %}">Zonas de Trabajo</a>
                         </li>
                         <li class="nav-item">
@@ -33,6 +45,73 @@
                         </li>
                     </ul>
                     <ul class="navbar-nav">
+                        <!-- Notificaciones Dropdown -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link position-relative" href="#" id="notificationDropdown" 
+                               role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-bell"></i>
+                                {% if unread_notifications_count > 0 %}
+                                <span id="notificationBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    {{ unread_notifications_count }}
+                                </span>
+                                {% endif %}
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-end notification-dropdown" aria-labelledby="notificationDropdown">
+                                <div class="notification-header d-flex justify-content-between align-items-center p-2 border-bottom">
+                                    <h6 class="mb-0">Notificaciones</h6>
+                                    {% if unread_notifications_count > 0 %}
+                                    <button id="markAllRead" class="btn btn-link btn-sm text-muted p-0">
+                                        <small><i class="fas fa-check-double me-1"></i>Marcar todas como leídas</small>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                                <div class="notification-body" style="max-height: 400px; overflow-y: auto;">
+                                    {% get_notifications as notifications %}
+                                    {% if notifications %}
+                                        {% for notification in notifications|slice:":5" %}
+                                        <div class="dropdown-item notification-item {% if not notification.read %}unread{% endif %}" 
+                                             id="notification-{{ notification.id }}">
+                                            <div class="d-flex align-items-start py-2">
+                                                <div class="notification-icon me-2">
+                                                    {% if notification.notification_type == 'OVERDUE' %}
+                                                        <i class="fas fa-exclamation-circle text-danger"></i>
+                                                    {% elif notification.notification_type == 'DUE_SOON' %}
+                                                        <i class="fas fa-clock text-warning"></i>
+                                                    {% else %}
+                                                        <i class="fas fa-info-circle text-info"></i>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <small class="text-muted d-block">{{ notification.created_at|timesince }}</small>
+                                                    <p class="mb-0 small">{{ notification.message }}</p>
+                                                    <a href="{% url 'event_detail' notification.event.id %}" class="stretched-link"></a>
+                                                </div>
+                                                {% if not notification.read %}
+                                                <button class="btn btn-link btn-sm text-muted p-0 mark-read position-relative" 
+                                                        data-notification-id="{{ notification.id }}"
+                                                        style="z-index: 2;">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                        {% if notifications.count > 5 %}
+                                        <div class="dropdown-item text-center">
+                                            <a href="{% url 'notification_list' %}" class="text-primary small">Ver todas las notificaciones</a>
+                                        </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="dropdown-item text-center py-3">
+                                            <i class="fas fa-check-circle text-success mb-2 d-block"></i>
+                                            <p class="text-muted mb-0 small">No hay notificaciones</p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </li>
+
+                        <!-- Usuario Dropdown -->
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" 
                                data-bs-toggle="dropdown" aria-expanded="false">
@@ -43,7 +122,7 @@
                                     <form method="post" action="{% url 'logout' %}" class="dropdown-item">
                                         {% csrf_token %}
                                         <button type="submit" class="logout-btn">
-                                            Cerrar Sesión
+                                            <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
                                         </button>
                                     </form>
                                 </li>
@@ -70,6 +149,98 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar todos los dropdowns de Bootstrap
+        var dropdowns = [].slice.call(document.querySelectorAll('[data-bs-toggle="dropdown"]'))
+        dropdowns.map(function (dropdownToggle) {
+            return new bootstrap.Dropdown(dropdownToggle)
+        });
+
+        // Código para las notificaciones
+        const markAllButton = document.getElementById('markAllRead');
+        const notificationBadge = document.getElementById('notificationBadge');
+        
+        // Marcar una notificación individual como leída
+        document.querySelectorAll('.mark-read').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const notificationId = this.dataset.notificationId;
+                const notificationItem = document.getElementById(`notification-${notificationId}`);
+
+                fetch(`/notifications/${notificationId}/mark-read/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        notificationItem.remove();
+                        updateNotificationCount();
+                        checkEmptyNotifications();
+                    }
+                });
+            });
+        });
+
+        // Marcar todas como leídas
+        if (markAllButton) {
+            markAllButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                fetch('/notifications/mark-all-read/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        document.querySelectorAll('.notification-item').forEach(item => {
+                            item.remove();
+                        });
+                        markAllButton.remove();
+                        updateNotificationCount();
+                        checkEmptyNotifications();
+                    }
+                });
+            });
+        }
+
+        function updateNotificationCount() {
+            const unreadCount = document.querySelectorAll('.notification-item').length;
+            if (unreadCount === 0) {
+                if (notificationBadge) {
+                    notificationBadge.style.display = 'none';
+                }
+            } else {
+                if (notificationBadge) {
+                    notificationBadge.textContent = unreadCount;
+                    notificationBadge.style.display = 'block';
+                }
+            }
+        }
+
+        function checkEmptyNotifications() {
+            const notificationBody = document.querySelector('.notification-body');
+            if (document.querySelectorAll('.notification-item').length === 0) {
+                notificationBody.innerHTML = `
+                    <div class="dropdown-item text-center py-3">
+                        <i class="fas fa-check-circle text-success mb-2 d-block"></i>
+                        <p class="text-muted mb-0 small">No hay notificaciones</p>
+                    </div>
+                `;
+            }
+        }
+    });
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

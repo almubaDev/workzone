@@ -30,7 +30,30 @@ class Tag(models.Model):
     class Meta:
         unique_together = ['name', 'work_zone']
         
-        
+ 
+class EventManager(models.Manager):
+    def get_overdue_events(self, user):
+        return self.filter(
+            created_by=user,
+            status__in=['NOT_STARTED', 'IN_PROGRESS'],
+            deadline__lt=timezone.now()
+        )
+
+    def get_due_soon_events(self, user):
+        tomorrow = timezone.now() + timezone.timedelta(days=1)
+        return self.filter(
+            created_by=user,
+            status__in=['NOT_STARTED', 'IN_PROGRESS'],
+            deadline__range=[timezone.now(), tomorrow]
+        )
+
+    def get_no_updates_events(self, user):
+        events = []
+        for event in self.filter(created_by=user, status__in=['NOT_STARTED', 'IN_PROGRESS']):
+            time_since_update = timezone.now() - event.last_updated
+            if time_since_update.days >= event.alert_frequency:
+                events.append(event)
+        return events       
 
 class Event(models.Model):
     PRIORITY_CHOICES = [
@@ -57,6 +80,7 @@ class Event(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='events')
     last_updated = models.DateTimeField(auto_now=True)
     alert_frequency = models.IntegerField(default=7)  # días entre alertas
+    objects = EventManager()
 
     def __str__(self):
         return self.title
@@ -85,3 +109,24 @@ class TodoItem(models.Model):
 
     def __str__(self):
         return self.description
+    
+    
+class Notification(models.Model):
+    NOTIFICATION_TYPES = [
+        ('OVERDUE', 'Evento Atrasado'),
+        ('DUE_SOON', 'Próximo a Vencer'),
+        ('NO_UPDATES', 'Sin Actualizaciones'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='notifications')
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    read = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.get_notification_type_display()} - {self.event.title}"

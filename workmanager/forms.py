@@ -35,17 +35,42 @@ class EventForm(forms.ModelForm):
         model = Event
         fields = ['title', 'description', 'work_zone', 'deadline', 
                  'priority', 'status', 'tags', 'alert_frequency']
+        labels = {
+            'title': 'Título',
+            'description': 'Descripción',
+            'work_zone': 'Zona de Trabajo',
+            'deadline': 'Fecha límite',
+            'priority': 'Prioridad',
+            'status': 'Estado',
+            'tags': 'Etiquetas',
+            'alert_frequency': 'Frecuencia de alertas (días)'
+        }
         widgets = {
-            'title': forms.TextInput(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'work_zone': forms.Select(attrs={'class': 'form-select'}),
+            'title': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Título del evento'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Descripción del evento'
+            }),
+            'work_zone': forms.Select(attrs={
+                'class': 'form-select'
+            }),
             'deadline': forms.DateTimeInput(attrs={
                 'class': 'form-control',
                 'type': 'datetime-local'
             }),
-            'priority': forms.Select(attrs={'class': 'form-select'}),
-            'status': forms.Select(attrs={'class': 'form-select'}),
-            'tags': forms.SelectMultiple(attrs={'class': 'form-select'}),
+            'priority': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'status': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'tags': forms.SelectMultiple(attrs={
+                'class': 'form-select'
+            }),
             'alert_frequency': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '1',
@@ -56,17 +81,16 @@ class EventForm(forms.ModelForm):
     def __init__(self, user, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['work_zone'].queryset = WorkZone.objects.filter(created_by=user)
-        
-        # Si es una instancia existente o hay datos POST
-        work_zone_id = None
-        if self.instance.pk:
-            work_zone_id = self.instance.work_zone_id
-        elif 'work_zone' in self.data:
-            work_zone_id = self.data.get('work_zone')
 
-        if work_zone_id:
+        # Si es una edición y hay una fecha límite
+        if self.instance.pk and self.instance.deadline:
+            # Formatear la fecha al formato requerido por datetime-local
+            self.initial['deadline'] = self.instance.deadline.strftime('%Y-%m-%dT%H:%M')
+
+        # Manejar las etiquetas según la workzone
+        if self.instance.pk and self.instance.work_zone:
             self.fields['tags'].queryset = Tag.objects.filter(
-                work_zone_id=work_zone_id,
+                work_zone=self.instance.work_zone,
                 created_by=user
             )
         else:

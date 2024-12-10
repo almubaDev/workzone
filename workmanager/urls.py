@@ -41,8 +41,20 @@ urlpatterns = [
     path('events/todo/<int:pk>/toggle/', views.TodoItemToggleView.as_view(), name='todo_toggle'),
     path('events/todo/<int:pk>/delete/', views.TodoItemDeleteView.as_view(), name='todo_delete'),
     
+    
+    #Notifications
+    path('notifications/', views.NotificationListView.as_view(), name='notification_list'),
+    path('notifications/<int:pk>/mark-read/', views.MarkNotificationReadView.as_view(), name='mark_notification_read'),
+    path('notifications/mark-all-read/', views.MarkAllNotificationsReadView.as_view(), name='mark_all_notifications_read'),
+
+    #Calendar
+    path('calendar/', views.CalendarView.as_view(), name='calendar'),
+
+    
     #API
-    # path('api/tags-by-workzone/', views.GetTagsByWorkzone.as_view(), name='get_tags_by_workzone'),
+       #Tag
     path('get-tags-by-workzone/', views.GetTagsByWorkzone.as_view(), name='get_tags_by_workzone'),
+       #Calendar
+    path('api/calendar-events/', views.CalendarEventsAPI.as_view(), name='calendar_events_api'),
     
 ]

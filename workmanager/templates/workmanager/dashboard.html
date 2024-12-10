@@ -1,240 +1,373 @@
 {% extends 'workmanager/base.html' %}
+{% load static %}
 
 {% block title %}Dashboard{% endblock %}
 
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/apexcharts/dist/apexcharts.css" rel="stylesheet">
+{% endblock %}
+
 {% block content %}
 <div class="row mb-4">
-    <div class="col">
-        <h1><i class="fa-solid fa-briefcase me-3"></i>Control de trabajo</h1>
-        <p class="text-muted">Bienvenido de nuevo, {{ user.username }}</p>
-    </div>
-</div>
-
-<!-- Tarjetas de Estadísticas -->
-<div class="row mb-4">
-    <!-- Zonas de Trabajo -->
-    <div class="col-md-3 mb-4">
-        <div class="card border-0 shadow-sm h-100">
+    <!-- Total de Eventos -->
+    <div class="col-md-3">
+        <div class="card h-100 dashboard-stat-card">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="text-muted mb-2">Zonas de Trabajo</h6>
-                        <h3 class="mb-0">{{ workzones.count }}</h3>
+                <h6 class="text-muted mb-4">Total de Eventos</h6>
+                <div class="d-flex align-items-center">
+                    <h2 class="mb-0">{{ total_events }}</h2>
+                    <div class="ms-auto">
+                        <div class="progress" style="width: 100px; height: 4px;">
+                            <div class="progress-bar bg-primary" style="width: {% if total_events > 0 %}{{ completion_rate }}{% else %}0{% endif %}%"></div>
+                        </div>
+                        <small class="text-muted">{{ completion_rate }}% completado</small>
                     </div>
-                    <div class="rounded-circle bg-primary bg-opacity-10 p-3">
-                        <i class="fas fa-building text-primary"></i>
-                    </div>
-                </div>
-                <div class="mt-3">
-                    <a href="{% url 'workzone_list' %}" class="btn btn-sm btn-outline-primary">
-                        Ver detalles <i class="fas fa-arrow-right ms-1"></i>
-                    </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Total Eventos -->
-    <div class="col-md-3 mb-4">
-        <div class="card border-0 shadow-sm h-100">
+    <!-- Eventos Activos -->
+    <div class="col-md-3">
+        <div class="card h-100 dashboard-stat-card">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="text-muted mb-2">Total Eventos</h6>
-                        <h3 class="mb-0">{{ events.count }}</h3>
+                <h6 class="text-muted mb-4">Eventos Activos</h6>
+                <div class="d-flex align-items-center">
+                    <h2 class="mb-0">{{ events_in_progress }}</h2>
+                    <div class="ms-auto">
+                        <i class="fas fa-spinner fa-2x text-primary"></i>
                     </div>
-                    <div class="rounded-circle bg-success bg-opacity-10 p-3">
-                        <i class="fas fa-calendar-check text-success"></i>
-                    </div>
-                </div>
-                <div class="mt-3">
-                    <a href="{% url 'event_list' %}" class="btn btn-sm btn-outline-success">
-                        Ver detalles <i class="fas fa-arrow-right ms-1"></i>
-                    </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Eventos Atrasados -->
-    <div class="col-md-3 mb-4">
-        <div class="card border-0 shadow-sm h-100">
+    <!-- Por Iniciar -->
+    <div class="col-md-3">
+        <div class="card h-100 dashboard-stat-card">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="text-muted mb-2">Eventos Atrasados</h6>
-                        <h3 class="mb-0 {% if events_overdue > 0 %}text-danger{% endif %}">
-                            {{ events_overdue }}
-                        </h3>
+                <h6 class="text-muted mb-4">Por Iniciar</h6>
+                <div class="d-flex align-items-center">
+                    <h2 class="mb-0">{{ events_not_started }}</h2>
+                    <div class="ms-auto">
+                        <i class="fas fa-hourglass-start fa-2x text-warning"></i>
                     </div>
-                    <div class="rounded-circle bg-danger bg-opacity-10 p-3">
-                        <i class="fas fa-clock text-danger"></i>
-                    </div>
-                </div>
-                <div class="mt-3">
-                    <span class="text-muted small">Requieren atención inmediata</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Etiquetas -->
-    <div class="col-md-3 mb-4">
-        <div class="card border-0 shadow-sm h-100">
+    <!-- Completados -->
+    <div class="col-md-3">
+        <div class="card h-100 dashboard-stat-card">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="text-muted mb-2">Etiquetas</h6>
-                        <h3 class="mb-0">{{ tags.count }}</h3>
+                <h6 class="text-muted mb-4">Completados</h6>
+                <div class="d-flex align-items-center">
+                    <h2 class="mb-0">{{ events_completed }}</h2>
+                    <div class="ms-auto">
+                        <i class="fas fa-check-circle fa-2x text-success"></i>
                     </div>
-                    <div class="rounded-circle bg-info bg-opacity-10 p-3">
-                        <i class="fas fa-tags text-info"></i>
-                    </div>
-                </div>
-                <div class="mt-3">
-                    <a href="{% url 'tag_list' %}" class="btn btn-sm btn-outline-info">
-                        Ver detalles <i class="fas fa-arrow-right ms-1"></i>
-                    </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Estado de Eventos -->
-<div class="row mb-4">
-    <div class="col-md-6 mb-4">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white border-0">
-                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Estado de Eventos</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-0">
-                    <!-- No Iniciados -->
-                    <div class="col-4 text-center border-end">
-                        <div class="p-3">
-                            <div class="display-6 text-secondary">{{ events_not_started }}</div>
-                            <div class="text-muted small">No Iniciados</div>
-                        </div>
-                    </div>
-                    <!-- En Progreso -->
-                    <div class="col-4 text-center border-end">
-                        <div class="p-3">
-                            <div class="display-6 text-primary">{{ events_in_progress }}</div>
-                            <div class="text-muted small">En Progreso</div>
-                        </div>
-                    </div>
-                    <!-- Completados -->
-                    <div class="col-4 text-center">
-                        <div class="p-3">
-                            <div class="display-6 text-success">{{ events_completed }}</div>
-                            <div class="text-muted small">Completados</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Acciones Rápidas -->
-    <div class="col-md-6 mb-4">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white border-0">
-                <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Acciones Rápidas</h5>
-            </div>
-            <div class="card-body">
-                <div class="d-grid gap-2">
-                    <a href="{% url 'event_create' %}" class="btn btn-primary">
-                        <i class="fas fa-plus me-2"></i>Nuevo Evento
-                    </a>
-                    <a href="{% url 'workzone_create' %}" class="btn btn-outline-primary">
-                        <i class="fas fa-building me-2"></i>Nueva Zona de Trabajo
-                    </a>
-                    <a href="{% url 'tag_create' %}" class="btn btn-outline-primary">
-                        <i class="fas fa-tag me-2"></i>Nueva Etiqueta
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Eventos Próximos -->
 <div class="row">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-calendar me-2"></i>Eventos Próximos</h5>
-                <a href="{% url 'event_list' %}" class="btn btn-sm btn-outline-primary">
-                    Ver todos <i class="fas fa-arrow-right ms-1"></i>
-                </a>
+    <!-- Columna Principal -->
+    <div class="col-md-8">
+        <!-- Distribución por Zona de Trabajo -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Distribución por Zona de Trabajo</h5>
             </div>
             <div class="card-body">
-                {% if upcoming_events %}
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Título</th>
-                                    <th>Zona</th>
-                                    <th>Fecha límite</th>
-                                    <th>Prioridad</th>
-                                    <th>Estado</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for event in upcoming_events %}
-                                    <tr>
-                                        <td>
-                                            <i class="fas fa-calendar-day me-2 text-muted"></i>
-                                            {{ event.title }}
-                                        </td>
-                                        <td>
-                                            <i class="fas fa-building me-1 text-muted"></i>
-                                            {{ event.work_zone.name }}
-                                        </td>
-                                        <td class="{% if event.is_overdue %}text-danger{% endif %}">
-                                            <i class="fas fa-clock me-1"></i>
-                                            {{ event.deadline|date:"d/m/Y H:i" }}
-                                        </td>
-                                        <td>
-                                            <span class="badge rounded-pill {% if event.priority == 'HIGH' %}bg-danger
-                                                     {% elif event.priority == 'MEDIUM' %}bg-warning
-                                                     {% else %}bg-info{% endif %}">
-                                                <i class="fas fa-flag me-1"></i>
-                                                {{ event.get_priority_display }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span class="badge rounded-pill {% if event.status == 'COMPLETED' %}bg-success
-                                                     {% elif event.status == 'IN_PROGRESS' %}bg-primary
-                                                     {% else %}bg-secondary{% endif %}">
-                                                <i class="fas {% if event.status == 'COMPLETED' %}fa-check
-                                                          {% elif event.status == 'IN_PROGRESS' %}fa-spinner
-                                                          {% else %}fa-hourglass-start{% endif %} me-1"></i>
-                                                {{ event.get_status_display }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <a href="{% url 'event_detail' event.pk %}" class="btn btn-sm btn-outline-primary">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                <div id="workzoneChart" style="height: 300px;"></div>
+            </div>
+        </div>
+
+        <!-- Estado de Eventos -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Estado de Eventos</h5>
+            </div>
+            <div class="card-body">
+                <div id="statusChart" style="height: 300px;"></div>
+            </div>
+        </div>
+
+        <!-- Actividad Reciente -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Actividad Reciente</h5>
+            </div>
+            <div class="card-body">
+                <div class="activity-timeline">
+                    {% for log in recent_logs %}
+                    <div class="timeline-item mb-3">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-pen text-primary"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <div class="d-flex justify-content-between">
+                                    <h6 class="mb-0">{{ log.event.title }}</h6>
+                                    <small class="text-muted">{{ log.created_at|timesince }}</small>
+                                </div>
+                                <p class="text-muted mb-0">{{ log.content|truncatechars:100 }}</p>
+                            </div>
+                        </div>
                     </div>
-                {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-calendar-check text-muted mb-3" style="font-size: 2rem;"></i>
-                        <p class="text-muted mb-0">No hay eventos próximos programados.</p>
-                    </div>
+                    {% empty %}
+                    <p class="text-muted text-center mb-0">No hay actividad reciente</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Columna Lateral -->
+    <div class="col-md-4">
+        <!-- Mini Calendario -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Calendario</h5>
+            </div>
+            <div class="card-body">
+                <div id="miniCalendar"></div>
+            </div>
+        </div>
+
+        <!-- Eventos Urgentes -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Eventos Urgentes</h5>
+                {% if urgent_events %}
+                <a href="{% url 'event_list' %}?priority=URGENT" class="btn btn-link btn-sm text-danger">
+                    Ver todos
+                </a>
                 {% endif %}
+            </div>
+            <div class="card-body">
+                {% for event in urgent_events %}
+                <div class="d-flex align-items-center mb-3">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-0">{{ event.title }}</h6>
+                        <small class="text-danger">
+                            <i class="fas fa-clock me-1"></i>{{ event.deadline|date:"d/m/Y H:i" }}
+                        </small>
+                    </div>
+                    <a href="{% url 'event_detail' event.id %}" class="btn btn-sm btn-outline-danger ms-2">
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center mb-0">No hay eventos urgentes</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Tareas Completadas -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Últimas Tareas Completadas</h5>
+            </div>
+            <div class="card-body">
+                {% for todo in completed_todos %}
+                <div class="d-flex align-items-center mb-3">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-0">{{ todo.description }}</h6>
+                        <small class="text-muted">
+                            <i class="fas fa-check me-1"></i>{{ todo.completed_at|date:"d/m/Y H:i" }}
+                        </small>
+                    </div>
+                    <a href="{% url 'event_detail' todo.event.id %}" class="btn btn-sm btn-outline-success ms-2">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center mb-0">No hay tareas completadas recientemente</p>
+                {% endfor %}
             </div>
         </div>
     </div>
 </div>
 {% endblock %}
-Las
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Configuración del gráfico de Zonas de Trabajo
+    var workzoneOptions = {
+        series: [{% for item in events_by_workzone %}{{ item.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+        chart: {
+            type: 'donut',
+            height: 300,
+            fontFamily: 'inherit'
+        },
+        labels: [{% for item in events_by_workzone %}"{{ item.work_zone__name }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+        colors: ['#0d6efd', '#6610f2', '#6f42c1', '#d63384', '#dc3545', '#fd7e14', '#ffc107'],
+        plotOptions: {
+            pie: {
+                donut: {
+                    size: '70%'
+                }
+            }
+        },
+        noData: {
+            text: 'No hay datos disponibles',
+            align: 'center',
+            verticalAlign: 'middle',
+            style: {
+                fontSize: '16px'
+            }
+        },
+        legend: {
+            position: 'bottom',
+            fontSize: '14px'
+        },
+        responsive: [{
+            breakpoint: 480,
+            options: {
+                chart: {
+                    height: 250
+                },
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }],
+        tooltip: {
+            y: {
+                formatter: function(value) {
+                    return value + ' eventos';
+                }
+            }
+        }
+    };
+
+    // Configuración del gráfico de Estados
+    var statusOptions = {
+        series: [{
+            name: 'Eventos',
+            data: [{% for item in events_by_status %}{{ item.count }}{% if not forloop.last %},{% endif %}{% endfor %}]
+        }],
+        chart: {
+            type: 'bar',
+            height: 300,
+            fontFamily: 'inherit',
+            toolbar: {
+                show: false
+            }
+        },
+        noData: {
+            text: 'No hay datos disponibles',
+            align: 'center',
+            verticalAlign: 'middle',
+            style: {
+                fontSize: '16px'
+            }
+        },
+        plotOptions: {
+            bar: {
+                horizontal: true,
+                borderRadius: 4,
+                dataLabels: {
+                    position: 'top'
+                }
+            }
+        },
+        colors: ['#0d6efd'],
+        dataLabels: {
+            enabled: true,
+            formatter: function(val) {
+                return val;
+            },
+            style: {
+                fontSize: '12px'
+            }
+        },
+        xaxis: {
+            categories: [{% for item in events_by_status %}"{{ item.get_status_display }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+            labels: {
+                style: {
+                    fontSize: '14px'
+                }
+            }
+        },
+        yaxis: {
+            labels: {
+                style: {
+                    fontSize: '14px'
+                }
+            }
+        },
+        grid: {
+            borderColor: '#f1f1f1'
+        },
+        tooltip: {
+            y: {
+                formatter: function(value) {
+                    return value + ' eventos';
+                }
+            }
+        }
+    };
+
+    // Mini Calendario
+    var calendarEl = document.getElementById('miniCalendar');
+    if (calendarEl) {
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: '',
+                center: 'title',
+                right: ''
+            },
+            height: 'auto',
+            events: [
+                {% for event in calendar_events %}
+                {
+                    title: '{{ event.title|escapejs }}',
+                    start: '{{ event.deadline|date:"Y-m-d" }}',
+                    url: '{% url "event_detail" event.id %}',
+                    className: 'priority-{{ event.priority|lower }}'
+                }{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            locale: 'es',
+            firstDay: 1,
+            dayMaxEvents: true,
+            eventDisplay: 'block',
+            eventTimeFormat: {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            }
+        });
+        calendar.render();
+    }
+
+    // Inicializar los gráficos si existen los elementos
+    var workzoneChartEl = document.querySelector("#workzoneChart");
+    if (workzoneChartEl) {
+        var workzoneChart = new ApexCharts(workzoneChartEl, workzoneOptions);
+        workzoneChart.render();
+    }
+
+    var statusChartEl = document.querySelector("#statusChart");
+    if (statusChartEl) {
+        var statusChart = new ApexCharts(statusChartEl, statusOptions);
+        statusChart.render();
+    }
+
+    // Inicializar tooltips de Bootstrap
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function(tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}
