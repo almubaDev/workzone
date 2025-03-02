@@ -1,0 +1,83 @@
+{% extends 'workmanager/base.html' %}
+{% load static %}
+
+{% block title %}Reporte de Cumplimiento{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Reporte de Cumplimiento por Tarea</h1>
+        <div>
+            <a href="?{{ request.GET.urlencode }}&export_pdf=1" class="btn btn-info me-2">
+                <i class="fas fa-file-pdf me-2"></i>Exportar PDF
+            </a>
+            <a href="{% url 'meece_teacher:compliance_manager' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Estado de Cumplimiento</h5>
+        </div>
+        <div class="card-body">
+            {% if task_data %}
+                {% for task in task_data %}
+                    <div class="border rounded p-3 mb-4">
+                        <h5 class="mb-3">{{ task.name }}</h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card bg-success bg-opacity-10">
+                                    <div class="card-header">
+                                        <h6 class="mb-0 text-success">
+                                            <i class="fas fa-check-circle me-2"></i>Cumplido
+                                            <span class="badge bg-success float-end">{{ task.completed_teachers|length }}</span>
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        {% if task.completed_teachers %}
+                                            <ul class="list-unstyled mb-0">
+                                                {% for teacher in task.completed_teachers %}
+                                                    <li class="mb-1">{{ teacher.name }} <small class="text-muted">({{ teacher.rut }})</small></li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% else %}
+                                            <p class="text-muted mb-0">No hay docentes que hayan completado esta tarea.</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card bg-warning bg-opacity-10">
+                                    <div class="card-header">
+                                        <h6 class="mb-0 text-warning">
+                                            <i class="fas fa-clock me-2"></i>Pendiente
+                                            <span class="badge bg-warning float-end">{{ task.pending_teachers|length }}</span>
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        {% if task.pending_teachers %}
+                                            <ul class="list-unstyled mb-0">
+                                                {% for teacher in task.pending_teachers %}
+                                                    <li class="mb-1">{{ teacher.name }} <small class="text-muted">({{ teacher.rut }})</small></li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% else %}
+                                            <p class="text-muted mb-0">No hay docentes pendientes para esta tarea.</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted mb-0">No hay tareas para mostrar.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

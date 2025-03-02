@@ -1,0 +1,377 @@
+{% extends 'workmanager/base.html' %}
+{% load static %}
+{% load compliance_tags %}
+
+{% block title %}Flujo de Cumplimiento{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Reset y estilos base */
+    table tbody tr {
+        background-color: rgba(0, 255, 255, .1) !important;
+    }
+    
+    .task-name {
+        cursor: pointer;
+    }
+
+    .task-name:hover {
+        color: #dc3545;
+    }
+
+    input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        border: 1px solid black;
+        border-radius: 4px;
+    }
+
+    /* Contenedor con scroll oculto */
+    .table-container {
+        max-height: 70vh;
+        overflow-y: auto;
+        position: relative;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+    }
+
+    .table-container::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+        display: none;
+    }
+
+    /* Estilos de la tabla */
+    .table-fixed-header {
+        position: relative;
+        border-collapse: separate;
+        border-spacing: 0;
+        width: 100%;
+        margin-bottom: 0;
+    }
+
+    /* Cabecera fija */
+    .table-fixed-header thead {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    .table-fixed-header thead th {
+        position: sticky;
+        top: 0;
+        background-color: white !important;
+        border-bottom: 2px solid #dee2e6;
+        padding: 1rem 0.75rem;
+        font-weight: 600;
+        z-index: 2;
+    }
+
+    /* Primera columna fija */
+    .table-fixed-header th:first-child,
+    .table-fixed-header td:first-child {
+        position: sticky;
+        left: 0;
+    }
+
+    .table-fixed-header thead th:first-child {
+        z-index: 3;
+        background-color: white !important;
+    }
+
+    /* Estilos para las celdas */
+    .table-fixed-header th,
+    .table-fixed-header td {
+        padding: 0.75rem;
+        vertical-align: middle;
+        min-width: 150px;
+        white-space: nowrap;
+    }
+
+    .table-fixed-header tbody td:first-child {
+        background-color: rgba(0, 255, 255, .1) !important;
+        z-index: 1;
+    }
+
+    /* Estilos para filas completadas */
+    .all-completed {
+        background-color: rgba(2, 185, 235, 0.31) !important;
+    }
+
+    .table-fixed-header tbody tr.all-completed td:first-child {
+        background-color: rgba(2, 185, 235, 0.31) !important;
+    }
+
+    /* Estilos para hover */
+    .table-fixed-header tbody tr:hover {
+        background-color: rgba(0, 123, 255, 0.1) !important;
+    }
+
+    .table-fixed-header tbody tr:hover td:first-child {
+        background-color: rgba(0, 123, 255, 0.1) !important;
+    }
+
+    /* Ajuste para hover en filas completadas */
+    .table-fixed-header tbody tr.all-completed:hover td {
+        background-color: rgba(2, 185, 235, 0.4) !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Flujo de Cumplimiento</h1>
+        <div>
+            <a href="{% url 'meece_teacher:compliance_report' %}" class="btn btn-info me-2">
+                <i class="fas fa-file-alt me-2"></i>Ver Reporte
+            </a>
+            <a href="{% url 'meece_teacher:teacher_manager' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver a Gestión de Docentes
+            </a>
+        </div>
+    </div>
+
+    <!-- Formulario de creación -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Nueva Tarea</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" id="createForm">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">Nombre de la Tarea</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <div class="invalid-feedback d-block">{{ form.name.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Crear Tarea
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla de cumplimiento -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Estado de Cumplimiento</h5>
+        </div>
+        <div class="card-body p-0"> <!-- Removed padding for better table appearance -->
+            {% if tasks %}
+                <div class="table-container">
+                    <table class="table table-fixed-header mb-0">
+                        <thead>
+                            <tr>
+                                <th class='bg-white'>Docente</th>
+                                {% for task in tasks %}
+                                <th class="text-center">
+                                    <span class="task-name" 
+                                          data-task-id="{{ task.id }}"
+                                          data-task-name="{{ task.name }}"
+                                          data-bs-toggle="tooltip" 
+                                          title="Click para eliminar">
+                                        {{ task.name }}
+                                    </span>
+                                </th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for teacher in teachers %}
+                            <tr>
+                                <td>{{ teacher.name }}</td>
+                                {% for task in tasks %}
+                                    {% with status=compliance_matrix|get_item:teacher.id|get_item:task.id %}
+                                    <td class="text-center compliance-cell" 
+                                        data-status-id="{{ status.id }}">
+                                        {% if status.is_active %}
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input type="checkbox" 
+                                                   class="form-check-input compliance-checkbox" 
+                                                   {% if status.is_checked %}checked{% endif %}>
+                                        </div>
+                                        {% endif %}
+                                    </td>
+                                    {% endwith %}
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted m-3">No hay tareas registradas.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación de eliminación -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">¿Está seguro de que desea eliminar esta tarea?</p>
+                <p class="text-danger mb-0"><small>Esta acción eliminará el estado de cumplimiento para todos los docentes.</small></p>
+            </div>
+            <div class="modal-footer">
+                <form id="deleteForm" method="post">
+                    {% csrf_token %}
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar tooltips
+    const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltips.forEach(tooltip => new bootstrap.Tooltip(tooltip));
+
+    // Modal de eliminación
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const deleteForm = document.getElementById('deleteForm');
+
+    // Función para verificar si una fila está completa
+    function checkRowCompletion(row) {
+        const allCells = row.querySelectorAll('.compliance-cell');
+        const activeCells = Array.from(allCells).filter(cell => 
+            cell.querySelector('.form-check')
+        );
+        
+        if (activeCells.length === 0) return;
+
+        const checkedCells = activeCells.filter(cell => 
+            cell.querySelector('.compliance-checkbox').checked
+        );
+
+        if (checkedCells.length === activeCells.length && activeCells.length > 0) {
+            row.classList.add('all-completed');
+        } else {
+            row.classList.remove('all-completed');
+        }
+    }
+
+    // Verificar todas las filas inicialmente
+    function checkAllRows() {
+        document.querySelectorAll('tbody tr').forEach(row => {
+            checkRowCompletion(row);
+        });
+    }
+
+    checkAllRows();
+
+    // Manejar click y doble click en celdas
+    document.querySelectorAll('.compliance-cell').forEach(cell => {
+        let clickTimeout = null;
+        let preventClick = false;
+
+        cell.addEventListener('click', function(e) {
+            if (preventClick) return;
+
+            const statusId = this.dataset.statusId;
+            const checkbox = this.querySelector('.compliance-checkbox');
+            
+            if (!checkbox) return;
+
+            clickTimeout = setTimeout(() => {
+                fetch('/meece/compliance/status/update/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: `status_id=${statusId}&action=toggle`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        checkbox.checked = data.is_checked;
+                        checkRowCompletion(cell.closest('tr'));
+                    }
+                });
+            }, 200);
+        });
+
+        cell.addEventListener('dblclick', function(e) {
+            clearTimeout(clickTimeout);
+            preventClick = true;
+            
+            const statusId = this.dataset.statusId;
+            
+            fetch('/meece/compliance/status/update/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: `status_id=${statusId}&action=activate`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.is_active) {
+                        this.innerHTML = `
+                            <div class="form-check d-flex justify-content-center">
+                                <input type="checkbox" class="form-check-input compliance-checkbox" ${data.is_checked ? 'checked' : ''}>
+                            </div>
+                        `;
+                    } else {
+                        this.innerHTML = '';
+                    }
+                    checkRowCompletion(this.closest('tr'));
+                }
+            });
+
+            setTimeout(() => { preventClick = false; }, 500);
+        });
+    });
+
+    // Manejar cambios en checkboxes
+    document.querySelectorAll('.compliance-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            checkRowCompletion(this.closest('tr'));
+        });
+    });
+
+    // Manejar eliminación de tarea
+    document.querySelectorAll('.task-name').forEach(taskName => {
+        taskName.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const taskId = this.dataset.taskId;
+            const taskName = this.dataset.taskName;
+            
+            const modalBody = document.querySelector('#deleteModal .modal-body');
+            modalBody.innerHTML = `
+                <p class="mb-0">¿Está seguro de que desea eliminar la tarea "${taskName}"?</p>
+                <p class="text-danger mb-0"><small>Esta acción eliminará el estado de cumplimiento para todos los docentes.</small></p>
+            `;
+            
+            deleteForm.action = `/meece/compliance/${taskId}/delete/`;
+            deleteModal.show();
+        });
+    });
+});
+</script>
+{% endblock %}

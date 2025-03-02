@@ -1,0 +1,107 @@
+<!-- templates/MEECETeacherManager/mpa_list.html -->
+{% extends 'workmanager/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3>MPAs Cargadas</h3>
+        <div class='d-flex'>
+            <a href="{% url 'meece_teacher:mpa_upload' %}" class="btn btn-primary me-2">
+                <i class="fas fa-upload me-2"></i>Cargar Nueva MPA
+            </a>
+            <a href="{% url 'meece_teacher:teacher_manager' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver a Lista de Docentes
+            </a>
+        </div>
+
+    </div>
+    <div class="card-body">
+        {% if mpas %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Programa</th>
+                        <th>Código</th>
+                        <th>Facultad</th>
+                        <th>Período</th>
+                        <th>Campus</th>
+                        <th>Hojas</th>
+                        <th>Fecha de carga</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for mpa in mpas %}
+                    <tr>
+                        <td>{{ mpa.program_name }}</td>
+                        <td>{{ mpa.program_code }}</td>
+                        <td>{{ mpa.faculty }}</td>
+                        <td>{{ mpa.period }}</td>
+                        <td>{{ mpa.campus }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info" type="button" 
+                                    data-bs-toggle="collapse" 
+                                    data-bs-target="#sheets-{{ mpa.id }}" 
+                                    aria-expanded="false">
+                                Ver hojas ({{ mpa.sheets.count }})
+                            </button>
+                        </td>
+                        <td>{{ mpa.uploaded_at|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{% url 'meece_teacher:mpa_detail' mpa.pk %}" 
+                                   class="btn btn-sm btn-info" title="Ver detalles">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'meece_teacher:mpa_edit' mpa.pk %}" 
+                                   class="btn btn-sm btn-warning" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form action="{% url 'meece_teacher:mpa_delete' mpa.pk %}" 
+                                      method="post" class="d-inline"
+                                      onsubmit="return confirm('¿Está seguro de eliminar esta MPA?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="8" class="p-0">
+                            <div class="collapse" id="sheets-{{ mpa.id }}">
+                                <div class="card card-body m-2">
+                                    <h6>Hojas del MPA:</h6>
+                                    <ul class="list-group">
+                                        {% for sheet in mpa.sheets.all %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            {{ sheet.sheet_name }}
+                                            <span class="badge bg-primary rounded-pill">
+                                                {{ sheet.schedules.count }} horarios
+                                            </span>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-file-excel fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No hay MPAs cargadas aún.</p>
+            <a href="{% url 'meece_teacher:mpa_upload' %}" class="btn btn-primary">
+                <i class="fas fa-upload me-2"></i>Cargar primera MPA
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

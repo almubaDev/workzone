@@ -56,45 +56,43 @@
 
 {% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const workZoneSelect = document.getElementById('id_work_zone');
-        const tagsSelect = document.getElementById('id_tags');
-        const form = document.querySelector('form');
+document.addEventListener('DOMContentLoaded', function() {
+    const workZoneSelect = document.getElementById('id_work_zone');
+    const tagsSelect = document.getElementById('id_tags');
     
-        if (workZoneSelect && tagsSelect) {
-            function updateTags() {
-                const workzoneId = workZoneSelect.value;
-                if (!workzoneId) return;
-    
-                fetch(`/get-tags-by-workzone/?workzone_id=${workzoneId}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        tagsSelect.innerHTML = '';
-                        
-                        if (data.tags && data.tags.length > 0) {
-                            data.tags.forEach(tag => {
-                                const option = document.createElement('option');
-                                option.value = tag.id;
-                                option.textContent = tag.name;
-                                tagsSelect.appendChild(option);
-                            });
-                        }
-                    })
-                    .catch(error => console.error('Error:', error));
-            }
-    
-            workZoneSelect.addEventListener('change', function() {
-                tagsSelect.innerHTML = '';  // Limpiar opciones actuales
-                if (this.value) {
-                    updateTags();
-                }
-            });
-    
-            // Cargar tags iniciales si hay una workzone seleccionada
-            if (workZoneSelect.value) {
-                updateTags();
-            }
+    function updateTags() {
+        const workZoneId = workZoneSelect.value;
+        if (!workZoneId) {
+            tagsSelect.innerHTML = '';
+            return;
         }
-    });
-    </script>
+
+        fetch(`/get-tags-by-workzone/?workzone_id=${workZoneId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Guardar las etiquetas seleccionadas actuales
+                    const selectedTags = Array.from(tagsSelect.selectedOptions).map(option => option.value);
+                    
+                    // Limpiar y actualizar las opciones
+                    tagsSelect.innerHTML = '';
+                    data.tags.forEach(tag => {
+                        const option = new Option(tag.name, tag.id);
+                        option.selected = selectedTags.includes(tag.id.toString());
+                        tagsSelect.add(option);
+                    });
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    // Actualizar etiquetas cuando cambia la zona de trabajo
+    workZoneSelect.addEventListener('change', updateTags);
+    
+    // Actualizar etiquetas al cargar la página si hay una zona seleccionada
+    if (workZoneSelect.value) {
+        updateTags();
+    }
+});
+</script>
 {% endblock %}

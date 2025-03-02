@@ -1,11 +1,11 @@
 # workmanager/views.py
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse_lazy
 from django.contrib import messages
-from .models import WorkZone, Tag, Event, LogEntry, TodoItem, Notification
-from .forms import WorkZoneForm, TagForm, EventForm, LogEntryForm, TodoItemForm
+from .models import WorkZone, Tag, Event, LogEntry, TodoItem, Notification, WorkZoneApp
+from .forms import WorkZoneForm, TagForm, EventForm, LogEntryForm, TodoItemForm, WorkZoneAppForm
 from django.contrib.auth.views import LoginView, LogoutView
 from django.views.generic import TemplateView
 from django.utils import timezone
@@ -15,8 +15,10 @@ from django.http import JsonResponse
 from django.urls import reverse
 from .utils import generate_notifications
 from django.db.models import Count, Q, F
+from django.core.serializers.json import DjangoJSONEncoder
 from datetime import timedelta
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -250,6 +252,7 @@ class CustomLoginView(LoginView):
     
 #DASHBOARD    
 
+
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'workmanager/dashboard.html'
     
@@ -258,21 +261,60 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         user = self.request.user
         today = timezone.now()
         
+        # Obtener todas las zonas de trabajo del usuario
+        workzones = WorkZone.objects.filter(created_by=user)
+        
         # Eventos por estado
-        events_by_status = Event.objects.filter(
+        events_by_status = list(Event.objects.filter(
             created_by=user
         ).values('status').annotate(
             count=Count('id')
-        ).order_by('status')
+        ).order_by('status'))
         
-        # Eventos por zona de trabajo
-        events_by_workzone = Event.objects.filter(
-            created_by=user
-        ).values('work_zone__name').annotate(
-            count=Count('id')
-        ).order_by('-count')
+        # Asegurarse de que todos los estados estén representados
+        status_dict = {status[0]: 0 for status in Event.STATUS_CHOICES}
+        for event_status in events_by_status:
+            status_dict[event_status['status']] = event_status['count']
         
-        # Eventos prioritarios
+        events_by_status = [
+            {'status': status, 'count': count}
+            for status, count in status_dict.items()
+        ]
+        
+        # Eventos por zona de trabajo con colores
+        events_by_workzone = []
+        for workzone in workzones:
+            count = Event.objects.filter(
+                created_by=user,
+                work_zone=workzone
+            ).count()
+            
+            events_by_workzone.append({
+                'name': workzone.name,
+                'count': count,
+                'color': workzone.color or 'rgb(200, 200, 200)'  # Color por defecto si es None
+            })
+        
+        # Eventos del calendario (mes actual)
+        calendar_events = Event.objects.filter(
+            created_by=user,
+            deadline__range=[
+                today.replace(day=1),
+                (today + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+            ]
+        ).values('id', 'title', 'deadline', 'priority')
+        
+        # Formatear eventos del calendario
+        calendar_events_formatted = []
+        for event in calendar_events:
+            calendar_events_formatted.append({
+                'id': event['id'],
+                'title': event['title'],
+                'deadline': event['deadline'].isoformat(),
+                'priority': event['priority']
+            })
+        
+        # Actualizar el contexto con todos los datos necesarios
         context.update({
             # Estadísticas generales
             'total_events': Event.objects.filter(created_by=user).count(),
@@ -299,44 +341,42 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 status__in=['NOT_STARTED', 'IN_PROGRESS']
             ).order_by('deadline')[:5],
             
-            # Datos para gráficos
-            'events_by_status': list(events_by_status),
-            'events_by_workzone': list(events_by_workzone),
+            # Datos para los gráficos (serializados para JavaScript)
+            'events_by_status': json.dumps(events_by_status, cls=DjangoJSONEncoder),
+            'events_by_workzone': json.dumps(events_by_workzone, cls=DjangoJSONEncoder),
+            'calendar_events': json.dumps(calendar_events_formatted, cls=DjangoJSONEncoder),
             
             # Actividad reciente
             'recent_logs': LogEntry.objects.filter(
                 created_by=user
             ).select_related('event').order_by('-created_at')[:5],
             
+            # Tareas completadas recientemente
             'completed_todos': TodoItem.objects.filter(
                 event__created_by=user,
                 is_completed=True
             ).select_related('event').order_by('-completed_at')[:5],
             
-            # Calculamos el porcentaje de cumplimiento
+            # Porcentaje de cumplimiento
             'completion_rate': self.calculate_completion_rate(user),
-            
-            # Mini calendario
-            'calendar_events': Event.objects.filter(
-                created_by=user,
-                deadline__range=[today.replace(day=1), (today + timedelta(days=32)).replace(day=1)]
-            ).values('id', 'title', 'deadline', 'priority')
         })
         
         return context
     
     def calculate_completion_rate(self, user):
+        """
+        Calcula el porcentaje de eventos completados.
+        """
         total_events = Event.objects.filter(created_by=user).count()
         
         if total_events == 0:
-            return 0  # Si no hay eventos, retorna 0%
+            return 0
         
         completed_events = Event.objects.filter(
             created_by=user,
             status='COMPLETED'
         ).count()
         
-        # Calcular porcentaje y redondear a entero
         return int((completed_events / total_events) * 100)
     
     
@@ -523,3 +563,93 @@ class CalendarEventsAPI(LoginRequiredMixin, View):
             })
         
         return JsonResponse(calendar_events, safe=False)
+    
+    
+class WorkZoneAppCreateView(LoginRequiredMixin, CreateView):
+    model = WorkZoneApp
+    form_class = WorkZoneAppForm
+    template_name = 'workmanager/workzone_app_form.html'
+    
+    def form_valid(self, form):
+        form.instance.work_zone_id = self.kwargs['workzone_pk']
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('workzone_detail', kwargs={'pk': self.kwargs['workzone_pk']})
+    
+    
+class WorkZoneAppManagerView(LoginRequiredMixin, View):
+    template_name = 'workmanager/workzone_app_manager.html'
+    
+    def get(self, request):
+        form = WorkZoneAppForm()
+        apps = WorkZoneApp.objects.filter(
+            work_zone__created_by=request.user
+        ).select_related('work_zone').order_by('work_zone__name', 'order', 'name')
+        
+        # Obtener todas las zonas de trabajo del usuario para el filtro
+        work_zones = WorkZone.objects.filter(created_by=request.user)
+        
+        # Filtrar por zona de trabajo si se especifica
+        selected_zone = request.GET.get('work_zone')
+        if selected_zone:
+            apps = apps.filter(work_zone_id=selected_zone)
+        
+        return render(request, self.template_name, {
+            'form': form,
+            'apps': apps,
+            'work_zones': work_zones,
+            'selected_zone': selected_zone
+        })
+    
+    def post(self, request):
+        form = WorkZoneAppForm(request.POST)
+        
+        if form.is_valid():
+            app = form.save(commit=False)
+            # Verificar que la zona de trabajo pertenece al usuario
+            if app.work_zone.created_by != request.user:
+                messages.error(request, 'Zona de trabajo no válida.')
+                return redirect('workzone_app_manager')
+            
+            app.save()
+            messages.success(request, 'Aplicación creada exitosamente.')
+            return redirect('workzone_app_manager')
+        
+        apps = WorkZoneApp.objects.filter(
+            work_zone__created_by=request.user
+        ).select_related('work_zone').order_by('work_zone__name', 'order', 'name')
+        work_zones = WorkZone.objects.filter(created_by=request.user)
+        
+        return render(request, self.template_name, {
+            'form': form,
+            'apps': apps,
+            'work_zones': work_zones
+        })
+
+
+class WorkZoneAppUpdateView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        app = get_object_or_404(WorkZoneApp, pk=pk, work_zone__created_by=request.user)
+        form = WorkZoneAppForm(request.POST, instance=app)
+        
+        if form.is_valid():
+            # Verificar que la zona de trabajo pertenece al usuario
+            if form.cleaned_data['work_zone'].created_by != request.user:
+                messages.error(request, 'Zona de trabajo no válida.')
+                return redirect('workzone_app_manager')
+                
+            form.save()
+            messages.success(request, 'Aplicación actualizada exitosamente.')
+        else:
+            messages.error(request, 'Error al actualizar la aplicación.')
+            
+        return redirect('workzone_app_manager')
+
+
+class WorkZoneAppDeleteView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        app = get_object_or_404(WorkZoneApp, pk=pk, work_zone__created_by=request.user)
+        app.delete()
+        messages.success(request, 'Aplicación eliminada exitosamente.')
+        return redirect('workzone_app_manager')

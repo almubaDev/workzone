@@ -1,0 +1,183 @@
+{% extends 'workmanager/base.html' %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3>Detalle MPA</h3>
+        <div>
+            <a href="{% url 'meece_teacher:mpa_timeline' mpa.id %}" class="btn btn-primary me-2">
+                <i class="fas fa-clock me-2"></i>Timeline
+            </a>
+            <a href="{% url 'meece_teacher:mpa_validation' %}" class="btn btn-info me-2">
+                <i class="fas fa-check-circle me-2"></i>Validar MPAs
+            </a>
+            <a class="btn btn-primary me-2" href="{% url 'meece_teacher:mpa_intake_status' %}">
+                <i class="fas fa-tasks me-2"></i>Estado INTAKEs
+            </a>
+            <a href="{% url 'meece_teacher:mpa_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver
+            </a>
+            <form action="{% url 'meece_teacher:mpa_delete' mpa.id %}" method="post" class="d-inline" onsubmit="return confirm('¿Está seguro de eliminar esta MPA?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash me-2"></i>Eliminar MPA
+                </button>
+            </form>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h5>Información General</h5>
+                <table class="table table-bordered">
+                    <tr>
+                        <th>Programa:</th>
+                        <td>{{ mpa.program_name }}</td>
+                    </tr>
+                    <tr>
+                        <th>Código:</th>
+                        <td>{{ mpa.program_code }}</td>
+                    </tr>
+                    <tr>
+                        <th>Facultad:</th>
+                        <td>{{ mpa.faculty }}</td>
+                    </tr>
+                    <tr>
+                        <th>Escuela:</th>
+                        <td>{{ mpa.school }}</td>
+                    </tr>
+                    <tr>
+                        <th>Campus:</th>
+                        <td>{{ mpa.campus }}</td>
+                    </tr>
+                    <tr>
+                        <th>Período:</th>
+                        <td>{{ mpa.period }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        {% for sheet in mpa.sheets.all %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>{{ sheet.intake }}</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead class="sticky-top bg-white">
+                            <tr>
+                                <th>Período</th>
+                                <th>NRC</th>
+                                <th>Código</th>
+                                <th>Sección</th>
+                                <th>Nombre Asignatura</th>
+                                <th>Actividad</th>
+                                <th>Modalidad</th>
+                                <th>Vacantes</th>
+                                <th>Día</th>
+                                <th>Horario</th>
+                                <th>Duración</th>
+                                <th>Fecha Inicio</th>
+                                <th>Fecha Término</th>
+                                <th>RUT</th>
+                                <th>Profesor</th>
+                                <th>Edificio</th>
+                                <th>Sala</th>
+                                <th>Valor Hora</th>
+                                <th>Horas Catálogo</th>
+                                <th>% Resp.</th>
+                                <th>Horas a Pagar</th>
+                                <th>Cuotas</th>
+                                <th>Valor Cuota</th>
+                                <th>Total a Pagar</th>
+                                <th>FOLIO</th>
+                                <th>PPTO</th>
+                                <th>Mínimo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for schedule in sheet.schedules.all %}
+                            <tr>
+                                <td>{{ schedule.period }}</td>
+                                <td>{{ schedule.nrc }}</td>
+                                <td>{{ schedule.course_code }}</td>
+                                <td>{{ schedule.section }}</td>
+                                <td style="min-width: 300px;">{{ schedule.course_name }}</td>
+                                <td>{{ schedule.activity }}</td>
+                                <td>{{ schedule.modality }}</td>
+                                <td>{{ schedule.vacancies }}</td>
+                                <td>{{ schedule.day }}</td>
+                                <td>{{ schedule.schedule }}</td>
+                                <td>{{ schedule.duration }}</td>
+                                <td>{{ schedule.start_date|date:"d/m/Y" }}</td>
+                                <td>{{ schedule.end_date|date:"d/m/Y" }}</td>
+                                <td>{{ schedule.teacher_rut }}</td>
+                                <td style="min-width: 200px;">{{ schedule.teacher_name }}</td>
+                                <td>{{ schedule.building }}</td>
+                                <td>{{ schedule.classroom }}</td>
+                                <td>{{ schedule.hourly_rate|default:"-" }}</td>
+                                <td>{{ schedule.catalog_hours|default:"-" }}</td>
+                                <td>{{ schedule.responsibility_percentage|default:"-" }}</td>
+                                <td>{{ schedule.payable_hours|default:"-" }}</td>
+                                <td>{{ schedule.installments|default:"-" }}</td>
+                                <td>{{ schedule.installment_value|default:"-" }}</td>
+                                <td>{{ schedule.total_payment|default:"-" }}</td>
+                                <td>{{ schedule.folio|default:"-" }}</td>
+                                <td>{{ schedule.budget|default:"-" }}</td>
+                                <td>{{ schedule.minimum|default:"-" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+    .table-responsive {
+        overflow-x: auto;
+        max-height: 600px;
+    }
+    
+    .sticky-top {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .table td {
+        white-space: nowrap;
+        padding: 8px 12px;
+        font-size: 0.875rem;
+    }
+
+    .table th {
+        white-space: nowrap;
+        padding: 10px 12px;
+        font-size: 0.875rem;
+        background-color: #f8f9fa;
+        vertical-align: middle;
+    }
+    
+    .table td[style*="min-width"] {
+        white-space: normal;
+    }
+
+    /* Añadir bordes sutiles */
+    .table td, .table th {
+        border: 1px solid #dee2e6;
+    }
+
+    /* Mejorar la legibilidad de los números */
+    .table td:nth-child(n+18):nth-child(-n+24) {
+        text-align: right;
+        font-family: monospace;
+    }
+</style>
+{% endblock %}

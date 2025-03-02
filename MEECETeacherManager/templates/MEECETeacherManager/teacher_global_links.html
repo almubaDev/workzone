@@ -1,0 +1,347 @@
+{% extends 'workmanager/base.html' %}
+{% load static %}
+
+{% block title %}Links de {{ teacher.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Gestión de Links - {{ teacher.name }}</h1>
+        <a href="{% url 'meece_teacher:teacher_detail' teacher.id %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Volver al Perfil
+        </a>
+    </div>
+
+    <!-- Links Globales -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Links Importantes</h5>
+        </div>
+        <div class="card-body">
+            {% if global_links %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Ícono</th>
+                                <th>Nombre</th>
+                                <th>Descripción</th>
+                                <th>URL</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for link in global_links %}
+                            <tr>
+                                <td class="text-center">
+                                    <i class="fas {{ link.global_link.icon }}"></i>
+                                </td>
+                                <td>{{ link.global_link.name }}</td>
+                                <td>{{ link.global_link.description|truncatechars:100 }}</td>
+                                <td>
+                                    {% if link.url %}
+                                        <a href="{{ link.url }}" target="_blank" class="btn btn-link btn-sm">
+                                            <i class="fas fa-external-link-alt me-1"></i>Ver
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">No configurada</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge {% if link.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                                        {{ link.is_active|yesno:"Activo,Inactivo" }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm edit-link" 
+                                            data-link-id="{{ link.id }}"
+                                            data-link-url="{{ link.url|default:'' }}"
+                                            data-link-active="{{ link.is_active|yesno:'true,false' }}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted mb-0">No hay links globales disponibles.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Links Personales -->
+    <div class="card mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Links particulares</h5>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addPersonalLinkModal">
+                <i class="fas fa-plus me-1"></i>Nuevo Link
+            </button>
+        </div>
+        <div class="card-body">
+            {% if teacher.personal_links.exists %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Ícono</th>
+                                <th>Nombre</th>
+                                <th>Descripción</th>
+                                <th>URL</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for link in teacher.personal_links.all %}
+                            <tr>
+                                <td class="text-center">
+                                    <i class="fas {{ link.icon }}"></i>
+                                </td>
+                                <td>{{ link.name }}</td>
+                                <td>{{ link.description|truncatechars:100 }}</td>
+                                <td>
+                                    <a href="{{ link.url }}" target="_blank" class="btn btn-link btn-sm">
+                                        <i class="fas fa-external-link-alt me-1"></i>Ver
+                                    </a>
+                                </td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm edit-personal-link" 
+                                            data-link-id="{{ link.id }}"
+                                            data-link-name="{{ link.name }}"
+                                            data-link-description="{{ link.description }}"
+                                            data-link-url="{{ link.url }}"
+                                            data-link-icon="{{ link.icon }}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-danger btn-sm delete-personal-link" 
+                                            data-link-id="{{ link.id }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center">No hay links personales registrados.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted mb-0">No hay links personales registrados.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal de edición de link global -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar URL del Link</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm" method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">URL</label>
+                        <input type="url" class="form-control" name="url" id="edit_url">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" name="is_active" id="edit_is_active">
+                            <label class="form-check-label" for="edit_is_active">Activo</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="submit" form="editForm" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Guardar Cambios
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para agregar link personal -->
+<div class="modal fade" id="addPersonalLinkModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuevo Link Personal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'meece_teacher:personal_link_create' teacher.id %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">URL</label>
+                        <input type="url" class="form-control" name="url" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ícono</label>
+                        <select class="form-select icon-select" name="icon">
+                            <option value="fa-link">Link</option>
+                            <option value="fa-book">Libro/Publicación</option>
+                            <option value="fa-globe">Sitio Web</option>
+                            <option value="fa-file">Documento</option>
+                            <option value="fa-video">Video</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Guardar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de edición de link personal -->
+<div class="modal fade" id="editPersonalLinkModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Link Personal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editPersonalLinkForm" method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" class="form-control" name="name" id="edit_personal_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea class="form-control" name="description" id="edit_personal_description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">URL</label>
+                        <input type="url" class="form-control" name="url" id="edit_personal_url" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ícono</label>
+                        <select class="form-select" name="icon" id="edit_personal_icon">
+                            <option value="fa-link">Link</option>
+                            <option value="fa-book">Libro/Publicación</option>
+                            <option value="fa-globe">Sitio Web</option>
+                            <option value="fa-file">Documento</option>
+                            <option value="fa-video">Video</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="submit" form="editPersonalLinkForm" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Guardar Cambios
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de eliminación de link personal -->
+<div class="modal fade" id="deletePersonalLinkModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">¿Está seguro de que desea eliminar este link personal?</p>
+            </div>
+            <div class="modal-footer">
+                <form id="deletePersonalLinkForm" method="post">
+                    {% csrf_token %}
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+   // Variables globales
+   const editGlobalModal = new bootstrap.Modal(document.getElementById('editModal'));
+   const editGlobalForm = document.getElementById('editForm');
+   const personalLinkEditModal = new bootstrap.Modal(document.getElementById('editPersonalLinkModal'));
+   const personalLinkDeleteModal = new bootstrap.Modal(document.getElementById('deletePersonalLinkModal'));
+
+   // Función para manejar la edición de links globales 
+   function handleGlobalEdit(button) {
+    const linkData = button.dataset;
+    editGlobalForm.action = `/meece/global-link-url/${linkData.linkId}/update/`;  // URL corregida
+    document.getElementById('edit_url').value = linkData.linkUrl;
+    document.getElementById('edit_is_active').checked = linkData.linkActive === 'true';
+    editGlobalModal.show();
+    }
+
+   // Función para manejar la edición de links personales
+   function handlePersonalLinkEdit(button) {
+       const linkData = button.dataset;
+       const editPersonalForm = document.getElementById('editPersonalLinkForm');
+       editPersonalForm.action = `/meece/personal-links/${linkData.linkId}/update/`;
+       
+       // Establecer los valores en el formulario
+       document.getElementById('edit_personal_name').value = linkData.linkName;
+       document.getElementById('edit_personal_description').value = linkData.linkDescription;
+       document.getElementById('edit_personal_url').value = linkData.linkUrl;
+       document.getElementById('edit_personal_icon').value = linkData.linkIcon;
+       
+       personalLinkEditModal.show();
+   }
+
+   // Función para manejar la eliminación de links personales
+   function handlePersonalLinkDelete(button) {
+       const linkId = button.dataset.linkId;
+       const deletePersonalForm = document.getElementById('deletePersonalLinkForm');
+       deletePersonalForm.action = `/meece/personal-links/${linkId}/delete/`;
+       personalLinkDeleteModal.show();
+   }
+
+   // Configurar los event listeners para links globales
+   document.querySelectorAll('.edit-link').forEach(button => {
+       button.addEventListener('click', () => handleGlobalEdit(button));
+   });
+
+   // Configurar los event listeners para links personales
+   document.querySelectorAll('.edit-personal-link').forEach(button => {
+       button.addEventListener('click', () => handlePersonalLinkEdit(button));
+   });
+
+   document.querySelectorAll('.delete-personal-link').forEach(button => {
+       button.addEventListener('click', () => handlePersonalLinkDelete(button));
+   });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,606 @@
+{% extends 'workmanager/base.html' %}
+{% load static %}
+
+{% block title %}Timeline MPA{% endblock %}
+
+{% block extra_css %}
+<link href="https://unpkg.com/vis-timeline@7.7.2/dist/vis-timeline-graph2d.min.css" rel="stylesheet" type="text/css" />
+<style>
+.timeline-container {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+}
+
+.filter-bar {
+    background: white;
+    border-bottom: 1px solid #dee2e6;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.timeline-main {
+    width: 100%;
+    height: calc(100% - 60px);
+    background: #ffffff;
+    padding: 20px;
+    position: relative;
+}
+
+#visualization {
+    width: 100%;
+    height: calc(100vh - 156px);
+    background: white;
+}
+
+/* Estilos para el eje temporal */
+.vis-time-axis .vis-text.vis-major {
+    font-weight: bold;
+    font-size: 14px !important;
+    padding: 8px !important;
+    background-color: #f8f9fa;
+}
+
+.vis-time-axis .vis-text.vis-minor {
+    font-size: 12px !important;
+    padding: 4px !important;
+    min-width: 60px !important;
+    text-align: center !important;
+}
+
+.vis-time-axis .vis-grid.vis-minor {
+    border-left: 1px solid #f0f0f0;
+}
+
+.vis-time-axis .vis-grid.vis-major {
+    border-left: 2px solid #dee2e6;
+}
+
+/* Estilos para los items */
+.vis-item {
+    border-radius: 3px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+}
+
+.vis-item.intake-line {
+    height: 40px !important;
+    margin: 8px 0 !important;
+    border-width: 2px !important;
+    border-style: solid !important;
+}
+
+.vis-item.course-line {
+    height: 28px !important;
+    margin: 4px 0 !important;
+    margin-left: 20px !important;
+    border-width: 1px !important;
+    border-style: solid !important;
+}
+
+/* Colores por INTAKE */
+.vis-item.intake-0 { 
+    border-color: #4a90e2 !important; 
+    background-color: rgba(74, 144, 226, 0.1) !important;
+}
+.vis-item.course-0 { 
+    border-color: #4a90e2 !important; 
+    background-color: rgba(74, 144, 226, 0.05) !important;
+}
+
+.vis-item.intake-1 { 
+    border-color: #50c878 !important; 
+    background-color: rgba(80, 200, 120, 0.1) !important;
+}
+.vis-item.course-1 { 
+    border-color: #50c878 !important; 
+    background-color: rgba(80, 200, 120, 0.05) !important;
+}
+
+.vis-item.intake-2 { 
+    border-color: #9b59b6 !important; 
+    background-color: rgba(155, 89, 182, 0.1) !important;
+}
+.vis-item.course-2 { 
+    border-color: #9b59b6 !important; 
+    background-color: rgba(155, 89, 182, 0.05) !important;
+}
+
+.vis-item.intake-3 { 
+    border-color: #f1c40f !important; 
+    background-color: rgba(241, 196, 15, 0.1) !important;
+}
+.vis-item.course-3 { 
+    border-color: #f1c40f !important; 
+    background-color: rgba(241, 196, 15, 0.05) !important;
+}
+
+/* Contenido del item */
+.vis-item .vis-item-content {
+    padding: 0 12px !important;
+}
+
+.intake-content {
+    font-weight: bold;
+    font-size: 14px;
+    line-height: 40px;
+    color: #2c3e50;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.course-content {
+    font-size: 13px;
+    line-height: 28px;
+    color: #34495e;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Controles de navegación */
+.nav-arrows {
+    position: absolute;
+    z-index: 1000;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.nav-arrows:hover {
+    background: #f8f9fa;
+}
+
+.nav-arrows.left { left: 20px; top: 50%; transform: translateY(-50%); }
+.nav-arrows.right { right: 20px; top: 50%; transform: translateY(-50%); }
+
+.zoom-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: white;
+    padding: 5px;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.zoom-controls button {
+    margin: 0 3px;
+}
+
+/* Estilos para el modal */
+.color-preview {
+    width: 30px;
+    height: 30px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.icon-preview {
+    font-size: 24px;
+    color: #495057;
+    text-align: center;
+    margin-top: 8px;
+}
+
+.event-form .form-control,
+.event-form .form-select {
+    margin-bottom: 0.5rem;
+}
+
+.invalid-feedback {
+    display: none;
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.form-control.is-invalid ~ .invalid-feedback,
+.form-select.is-invalid ~ .invalid-feedback {
+    display: block;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="timeline-container">
+    <!-- Barra de filtros -->
+    <div class="filter-bar">
+        <div class="d-flex gap-3 align-items-center p-3">
+            <div class="d-flex align-items-center gap-2">
+                <label>INTAKE:</label>
+                <select class="form-select form-select-sm w-auto" id="intakeFilter">
+                    <option value="">Todos los INTAKEs</option>
+                    {% for data in timeline_data %}
+                        <option value="{{ data.intake }}">{{ data.intake }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <label>Año:</label>
+                <select class="form-select form-select-sm w-auto" id="yearFilter">
+                    <option value="">Todos los años</option>
+                    {% for year in years %}
+                        <option value="{{ year }}">{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="ms-auto">
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#eventModal">
+                    <i class="fas fa-plus"></i> Nuevo Evento
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="timeline-main">
+        <div class="nav-arrows left">
+            <i class="fas fa-chevron-left"></i>
+        </div>
+        <div class="nav-arrows right">
+            <i class="fas fa-chevron-right"></i>
+        </div>
+
+        <div class="zoom-controls">
+            <button class="btn btn-sm btn-outline-secondary zoom-in">
+                <i class="fas fa-search-plus"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary zoom-out">
+                <i class="fas fa-search-minus"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary move-today">
+                <i class="fas fa-calendar-day"></i>
+            </button>
+        </div>
+
+        <div id="visualization"></div>
+    </div>
+</div>
+
+<!-- Modal de Evento -->
+<div class="modal fade" id="eventModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuevo Evento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="eventForm" class="event-form" method="post" action="{% url 'meece_teacher:timeline_event_create' mpa_id=mpa.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Título</label>
+                        {{ form.title }}
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Tipo</label>
+                        {{ form.event_type }}
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Fecha</label>
+                        {{ form.event_date }}
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Color</label>
+                        <div class="input-group">
+                            <div class="color-preview me-2"></div>
+                            {{ form.color }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Ícono</label>
+                        {{ form.icon }}
+                        <div class="icon-preview mt-2">
+                            <i class="fas"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="https://unpkg.com/vis-timeline@7.7.2/standalone/umd/vis-timeline-graph2d.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var container = document.getElementById('visualization');
+    var items = new vis.DataSet();
+    var currentOrder = 0;
+
+    try {
+        console.log('Iniciando carga de datos del timeline');
+
+        // Cargar datos de INTAKEs y cursos
+        {% for intake_data in timeline_data %}
+            {% with first_course=intake_data.courses|first %}
+            {% with last_course=intake_data.courses|last %}
+            
+            // Calcular espacio base para este grupo
+            var baseOrder = currentOrder * 10;
+
+            // Agregar INTAKE
+            items.add({
+                id: 'intake_{{ forloop.counter }}',
+                content: '<div class="intake-content">{{ intake_data.intake|escapejs }}</div>',
+                start: new Date('{{ first_course.start_date|date:"Y-m-d" }}'),
+                end: new Date('{{ last_course.end_date|date:"Y-m-d" }}'),
+                className: 'intake-line intake-' + ({{ forloop.counter0 }} % 4),
+                type: 'range',
+                order: baseOrder
+            });
+
+            // Agregar cursos del INTAKE
+            {% for course in intake_data.courses %}
+            items.add({
+                id: 'course_{{ course.id }}',
+                content: '<div class="course-content">{{ course.course_code|escapejs }} - {{ course.course_name|escapejs }}</div>',
+                start: new Date('{{ course.start_date|date:"Y-m-d" }}'),
+                end: new Date('{{ course.end_date|date:"Y-m-d" }}'),
+                className: 'course-line course-' + ({{ forloop.parentloop.counter0 }} % 4),
+                type: 'range',
+                order: baseOrder + {{ forloop.counter }}
+            });
+            {% endfor %}
+            
+            currentOrder++;
+            {% endwith %}
+            {% endwith %}
+        {% endfor %}
+
+        // Cargar eventos existentes
+        {% for event in timeline_events %}
+        items.add({
+            id: 'event_{{ event.id }}',
+            content: `<div class="event-content">
+                        <i class="fas {{ event.icon }}"></i> 
+                        <span class="event-title">{{ event.title|escapejs }}</span>
+                    </div>`,
+            start: new Date('{{ event.event_date|date:"Y-m-d H:i" }}'),
+            type: 'point',
+            className: 'timeline-event',
+            style: `background-color: {{ event.color }}; border-color: {{ event.color }};`,
+            order: -1
+        });
+        {% endfor %}
+
+        // Configuración del timeline
+        var options = {
+            stack: false,
+            horizontalScroll: true,
+            verticalScroll: true,
+            zoomKey: 'ctrlKey',
+            height: '100%',
+            min: new Date('{{ date_range.start|date:"Y-m-d" }}'),
+            max: new Date('{{ date_range.end|date:"Y-m-d" }}'),
+            start: new Date('{{ date_range.start|date:"Y-m-d" }}'),
+            end: new Date('{{ date_range.end|date:"Y-m-d" }}'),
+            margin: {
+                axis: 60,
+                item: {
+                    horizontal: 0,
+                    vertical: 10
+                }
+            },
+            orientation: {
+                axis: 'top',
+                item: 'top'
+            },
+            order: function(a, b) {
+                return a.order - b.order;
+            },
+            timeAxis: { 
+                scale: 'day',
+                step: 1
+            },
+            format: {
+                minorLabels: {
+                    day: 'D',
+                    weekday: 'ddd'
+                },
+                majorLabels: {
+                    day: 'MMMM YYYY',
+                    week: 'MMMM YYYY',
+                    month: 'YYYY',
+                    year: 'YYYY'
+                }
+            },
+            showCurrentTime: true,
+            showMajorLabels: true,
+            showMinorLabels: true,
+            zoomMin: 1000 * 60 * 60 * 24 * 7,  // Una semana
+            zoomMax: 1000 * 60 * 60 * 24 * 365 * 2  // Dos años
+        };
+
+        // Crear timeline
+        var timeline = new vis.Timeline(container, items, options);
+        console.log('Timeline creado exitosamente');
+
+        // Filtros
+        const intakeFilter = document.getElementById('intakeFilter');
+        const yearFilter = document.getElementById('yearFilter');
+
+        function filterItems() {
+            const selectedIntake = intakeFilter.value;
+            const selectedYear = yearFilter.value;
+            
+            items.forEach(item => {
+                let isVisible = true;
+                const itemDate = new Date(item.start);
+                const itemYear = itemDate.getFullYear().toString();
+                
+                if (selectedIntake && !item.id.includes(selectedIntake)) {
+                    isVisible = false;
+                }
+                
+                if (selectedYear && itemYear !== selectedYear) {
+                    isVisible = false;
+                }
+                
+                items.update({ id: item.id, visible: isVisible });
+            });
+        }
+
+        if (intakeFilter) intakeFilter.addEventListener('change', filterItems);
+        if (yearFilter) yearFilter.addEventListener('change', filterItems);
+
+        // Navegación con teclado
+        document.addEventListener('keydown', function(e) {
+            const movePercentage = 0.2;
+            const currentWindow = timeline.getWindow();
+            const interval = currentWindow.end - currentWindow.start;
+            const step = interval * movePercentage;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    timeline.setWindow(currentWindow.start - step, currentWindow.end - step);
+                    break;
+                case 'ArrowRight':
+                    timeline.setWindow(currentWindow.start + step, currentWindow.end + step);
+                    break;
+            }
+        });
+
+        // Navegación con botones
+        document.querySelector('.nav-arrows.left').onclick = () => {
+            const currentWindow = timeline.getWindow();
+            const interval = currentWindow.end - currentWindow.start;
+            timeline.setWindow(currentWindow.start - interval * 0.2, currentWindow.end - interval * 0.2);
+        };
+
+        document.querySelector('.nav-arrows.right').onclick = () => {
+            const currentWindow = timeline.getWindow();
+            const interval = currentWindow.end - currentWindow.start;
+            timeline.setWindow(currentWindow.start + interval * 0.2, currentWindow.end + interval * 0.2);
+        };
+
+        // Zoom controls
+        document.querySelector('.zoom-in').onclick = () => timeline.zoomIn(0.5);
+        document.querySelector('.zoom-out').onclick = () => timeline.zoomOut(0.5);
+        document.querySelector('.move-today').onclick = () => timeline.moveTo(new Date());
+
+        // Formulario de eventos
+        const eventForm = document.getElementById('eventForm');
+        if (eventForm) {
+            eventForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                fetch(this.action, {
+                    method: 'POST',
+                    body: new FormData(this),
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Agregar nuevo evento al timeline
+                        items.add({
+                            id: `event_${data.event.id}`,
+                            content: `<div class="event-content">
+                                        <i class="fas ${data.event.icon}"></i> 
+                                        <span class="event-title">${data.event.title}</span>
+                                    </div>`,
+                            start: new Date(data.event.start),
+                            type: 'point',
+                            className: 'timeline-event',
+                            style: `background-color: ${data.event.color}; border-color: ${data.event.color};`,
+                            order: -1
+                        });
+
+                        // Cerrar modal y limpiar formulario
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('eventModal'));
+                        modal.hide();
+                        eventForm.reset();
+
+                        // Mostrar mensaje de éxito
+                        alert('Evento creado exitosamente');
+                    } else {
+                        // Mostrar errores en los campos
+                        Object.keys(data.errors).forEach(field => {
+                            const input = document.getElementById(`id_${field}`);
+                            if (input) {
+                                input.classList.add('is-invalid');
+                                const feedback = input.nextElementSibling;
+                                if (feedback) {
+                                    feedback.textContent = data.errors[field][0];
+                                }
+                            }
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al procesar la solicitud');
+                });
+            });
+        }
+
+        // Vista inicial
+        var initialStart = new Date();
+        var initialEnd = new Date();
+        initialEnd.setMonth(initialEnd.getMonth() + 4);
+        timeline.setWindow(initialStart, initialEnd);
+
+    } catch (error) {
+        console.error("Error al crear timeline:", error);
+        if (container) {
+            container.innerHTML = '<div class="alert alert-danger m-3">Error al cargar el timeline: ' + error.message + '</div>';
+        }
+    }
+
+    // Preview de color e ícono
+    const colorInput = document.getElementById('id_color');
+    const colorPreview = document.querySelector('.color-preview');
+    const iconInput = document.getElementById('id_icon');
+    const iconPreview = document.querySelector('.icon-preview i');
+
+    if (colorInput && colorPreview) {
+        colorInput.addEventListener('input', function() {
+            colorPreview.style.backgroundColor = this.value;
+        });
+        // Inicializar color preview
+        colorPreview.style.backgroundColor = colorInput.value;
+    }
+
+    if (iconInput && iconPreview) {
+        iconInput.addEventListener('change', function() {
+            iconPreview.className = 'fas ' + this.value;
+        });
+        // Inicializar icon preview
+        if (iconInput.value) {
+            iconPreview.className = 'fas ' + iconInput.value;
+        }
+    }
+});
+</script>
+{% endblock %}

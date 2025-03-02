@@ -1,5 +1,5 @@
-<!-- templates/workmanager/workzone_list.html -->
 {% extends 'workmanager/base.html' %}
+{% load static %}
 
 {% block title %}Zonas de Trabajo{% endblock %}
 
@@ -18,7 +18,27 @@
                 <div class="card-body">
                     <h5 class="card-title">{{ workzone.name }}</h5>
                     <p class="card-text">{{ workzone.description|truncatewords:30 }}</p>
-                    <p class="card-text"><small class="text-muted">Creado: {{ workzone.created_at|date:"d/m/Y" }}</small></p>
+                    
+                    {% if workzone.applications.exists %}
+                        <div class="mt-3">
+                            <h6 class="mb-3">Herramientas disponibles:</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for app in workzone.applications.all %}
+                                    {% if app.is_active %}
+                                        <a href="{% url app.url_name %}" 
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="fas {{ app.icon }} me-1"></i>
+                                            {{ app.name }}
+                                        </a>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    <p class="card-text mt-3">
+                        <small class="text-muted">Creado: {{ workzone.created_at|date:"d/m/Y" }}</small>
+                    </p>
                 </div>
                 <div class="card-footer">
                     <div class="btn-group w-100">

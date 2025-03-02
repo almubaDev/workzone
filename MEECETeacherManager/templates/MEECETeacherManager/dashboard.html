@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Gestión de Docentes</h1>
+        <a href="{% url 'meece_teacher:teacher_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nuevo Docente
+        </a>
+    </div>
+
+    <div class="row">
+        {% for teacher in teachers %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ teacher.name }}</h5>
+                        <p class="card-text">RUT: {{ teacher.rut }}</p>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="{% url 'meece_teacher:teacher_detail' teacher.pk %}" 
+                           class="btn btn-primary btn-sm w-100">
+                            Ver Detalles
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    No hay docentes registrados. ¡Comienza agregando uno!
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'tinymce',
     'workmanager',  # Cambiado de 'core' a 'workmanager'
+    'MEECETeacherManager'
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"

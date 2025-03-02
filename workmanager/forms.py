@@ -1,6 +1,6 @@
 # workmanager/forms.py
 from django import forms
-from .models import WorkZone, Tag, Event, LogEntry, TodoItem
+from .models import WorkZone, Tag, Event, LogEntry, TodoItem, WorkZoneApp
 from datetime import datetime
 from tinymce.widgets import TinyMCE
 
@@ -30,6 +30,7 @@ class LogEntryForm(forms.ModelForm):
         
 
 
+# workmanager/forms.py
 class EventForm(forms.ModelForm):
     class Meta:
         model = Event
@@ -80,15 +81,21 @@ class EventForm(forms.ModelForm):
 
     def __init__(self, user, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.user = user
         self.fields['work_zone'].queryset = WorkZone.objects.filter(created_by=user)
 
         # Si es una edición y hay una fecha límite
         if self.instance.pk and self.instance.deadline:
-            # Formatear la fecha al formato requerido por datetime-local
             self.initial['deadline'] = self.instance.deadline.strftime('%Y-%m-%dT%H:%M')
 
-        # Manejar las etiquetas según la workzone
-        if self.instance.pk and self.instance.work_zone:
+        # Si hay datos POST y una zona de trabajo seleccionada
+        if self.data.get('work_zone'):
+            self.fields['tags'].queryset = Tag.objects.filter(
+                work_zone_id=self.data.get('work_zone'),
+                created_by=user
+            )
+        # Si es una edición y hay una zona de trabajo
+        elif self.instance.pk and self.instance.work_zone:
             self.fields['tags'].queryset = Tag.objects.filter(
                 work_zone=self.instance.work_zone,
                 created_by=user
@@ -102,12 +109,20 @@ class EventForm(forms.ModelForm):
         tags = cleaned_data.get('tags')
 
         if work_zone and tags:
+            # Obtener las etiquetas válidas para la zona de trabajo
             valid_tags = Tag.objects.filter(
                 work_zone=work_zone,
-                id__in=[tag.id for tag in tags]
+                created_by=self.user
             )
-            if valid_tags.count() != tags.count():
-                self.add_error('tags', 'Por favor, seleccione etiquetas válidas.')
+            
+            # Verificar que todas las etiquetas seleccionadas son válidas
+            selected_tags = set(tag.id for tag in tags)
+            valid_tag_ids = set(valid_tags.values_list('id', flat=True))
+            
+            if not selected_tags.issubset(valid_tag_ids):
+                invalid_tags = selected_tags - valid_tag_ids
+                self.add_error('tags', 
+                    f'Las siguientes etiquetas no son válidas para esta zona de trabajo: {list(invalid_tags)}')
 
         return cleaned_data
             
@@ -144,3 +159,54 @@ class WorkZoneForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre de la zona de trabajo'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Descripción de la zona de trabajo'}),
         }
+        
+class WorkZoneAppForm(forms.ModelForm):
+    ICON_CHOICES = [
+        ('fa-chalkboard-teacher', 'Profesor'),
+        ('fa-users', 'Usuarios'),
+        ('fa-book', 'Libro'),
+        ('fa-graduation-cap', 'Graduación'),
+        ('fa-calendar-check', 'Calendario'),
+        ('fa-clipboard', 'Portapapeles'),
+        ('fa-chart-bar', 'Gráfico'),
+        ('fa-cog', 'Configuración'),
+        ('fa-tasks', 'Tareas'),
+        ('fa-file-alt', 'Documento'),
+        ('fa-database', 'Base de datos'),
+        ('fa-clock', 'Reloj'),
+        ('fa-list-alt', 'Lista'),
+        ('fa-folder', 'Carpeta'),
+        ('fa-tools', 'Herramientas'),
+        ('fa-search', 'Búsqueda'),
+        ('fa-bell', 'Notificación'),
+        ('fa-envelope', 'Correo'),
+        ('fa-chart-line', 'Estadísticas'),
+        ('fa-user-graduate', 'Estudiante'),
+    ]
+
+    icon = forms.ChoiceField(
+        choices=ICON_CHOICES,
+        label='Ícono',
+        widget=forms.Select(attrs={
+            'class': 'form-select icon-select'
+        })
+    )
+
+    class Meta:
+        model = WorkZoneApp
+        fields = ['name', 'description', 'icon', 'url_name', 'work_zone', 'is_active', 'order']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'url_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'work_zone': forms.Select(attrs={'class': 'form-select'}),
+            'order': forms.NumberInput(attrs={'class': 'form-control'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'})
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filtrar las zonas de trabajo por usuario si está disponible
+        if self.instance and hasattr(self.instance, 'work_zone'):
+            user = self.instance.work_zone.created_by
+            self.fields['work_zone'].queryset = WorkZone.objects.filter(created_by=user)

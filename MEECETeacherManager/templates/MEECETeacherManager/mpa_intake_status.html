@@ -1,0 +1,90 @@
+{% extends 'workmanager/base.html' %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3>Estado de INTAKEs</h3>
+        <a href="{% url 'meece_teacher:mpa_intake_status_pdf' %}" class="btn btn-secondary me-2">
+            <i class="fas fa-file-pdf me-2"></i>Exportar PDF
+        </a>
+        <a href="{% url 'meece_teacher:mpa_list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Volver
+        </a>
+    </div>
+    <div class="card-body">
+        {% for status in intake_status %}
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5>{{ status.sheet.intake }}</h5>
+                {% if status.is_finished %}
+                <form method="post" 
+                      onsubmit="return confirm('¿Está seguro de eliminar este INTAKE?')"
+                      class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="sheet_id" value="{{ status.sheet.id }}">
+                    <button type="submit" class="btn btn-danger btn-sm">
+                        <i class="fas fa-trash me-2"></i>Eliminar INTAKE
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Periodo:</strong> 
+                    {{ status.global_start|date:"d/m/Y" }} - {{ status.global_end|date:"d/m/Y" }}
+                </div>
+
+                {% if status.current_courses %}
+                <div class="alert alert-info">
+                    <h6>Asignaturas en curso:</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Asignatura</th>
+                                    <th>Profesor</th>
+                                    <th>Horario</th>
+                                    <th>Período</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for course in status.current_courses %}
+                                <tr>
+                                    <td>{{ course.course_code }}</td>
+                                    <td>{{ course.course_name }}</td>
+                                    <td>{{ course.teacher_name }}</td>
+                                    <td>{{ course.day }} {{ course.schedule }}</td>
+                                    <td>{{ course.start_date|date:"d/m/Y" }} - {{ course.end_date|date:"d/m/Y" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% elif status.next_course %}
+                <div class="alert alert-warning">
+                    <h6>Próxima asignatura:</h6>
+                    <p>
+                        <strong>{{ status.next_course.course_code }}</strong> - 
+                        {{ status.next_course.course_name }}<br>
+                        Profesor: {{ status.next_course.teacher_name }}<br>
+                        Horario: {{ status.next_course.day }} {{ status.next_course.schedule }}<br>
+                        Inicio: {{ status.next_course.start_date|date:"d/m/Y" }}
+                    </p>
+                </div>
+                {% elif status.is_finished %}
+                <div class="alert alert-secondary">
+                    INTAKE finalizado
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="alert alert-info">
+            No hay INTAKEs registrados
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

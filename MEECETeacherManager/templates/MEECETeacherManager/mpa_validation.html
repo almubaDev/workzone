@@ -1,0 +1,222 @@
+{% extends 'workmanager/base.html' %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3>Validación de MPAs</h3>
+        <div class="d-flex">
+            <a id="pdfExportButton" 
+                href="{% url 'meece_teacher:mpa_validation_pdf' %}" 
+                class="btn btn-primary me-2" 
+                data-base-url="{% url 'meece_teacher:mpa_validation_pdf' %}">
+                 <i class="fas fa-file-pdf me-2"></i>Exportar PDF
+             </a>
+            <a href="{% url 'meece_teacher:mpa_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <!-- Filtros -->
+        <div class="mb-4">
+            <div class="btn-group">
+                <button type="button" class="btn btn-outline-secondary active filter-btn" data-filter="all">
+                    <i class="fas fa-list me-1"></i>Todos
+                </button>
+                <button type="button" class="btn btn-outline-danger filter-btn" data-filter="teacher_conflict">
+                    <i class="fas fa-user-clock me-1"></i>Conflictos de Profesor
+                </button>
+                <button type="button" class="btn btn-outline-danger filter-btn" data-filter="date_mismatch">
+                    <i class="fas fa-calendar-times me-1"></i>Fechas Incorrectas
+                </button>
+                <button type="button" class="btn btn-outline-danger filter-btn" data-filter="invalid_saturday_schedule">
+                    <i class="fas fa-calendar-day me-1"></i>Horario Sábado
+                </button>
+                <button type="button" class="btn btn-outline-danger filter-btn" data-filter="duration_mismatch">
+                    <i class="fas fa-clock me-1"></i>Duración Incorrecta
+                </button>
+                <button type="button" class="btn btn-outline-warning filter-btn" data-filter="large_gap">
+                    <i class="fas fa-grip-lines me-1"></i>Intervalos Grandes
+                </button>
+            </div>
+        </div>
+
+        {% for mpa_validation in validation_results %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>{{ mpa_validation.mpa.program_name }}</h5>
+                <small class="text-muted">Código: {{ mpa_validation.mpa.program_code }}</small>
+            </div>
+            
+            {% for sheet_validation in mpa_validation.sheets_validation %}
+            <div class="card-body border-bottom">
+                <h6 class="mb-3">{{ sheet_validation.sheet.intake }}</h6>
+                
+                {% if sheet_validation.conflicts %}
+                    {% regroup sheet_validation.conflicts by severity as severity_list %}
+                    
+                    {% for severity in severity_list %}
+                    <div class="mb-3">
+                        <h6 class="{% if severity.grouper == 'error' %}text-danger{% else %}text-warning{% endif %}">
+                            {% if severity.grouper == 'error' %}
+                                <i class="fas fa-exclamation-circle me-2"></i>Errores
+                            {% else %}
+                                <i class="fas fa-exclamation-triangle me-2"></i>Advertencias
+                            {% endif %}
+                        </h6>
+                        
+                        <div class="list-group">
+                            {% for conflict in severity.list %}
+                            <div class="list-group-item list-group-item-{{ severity.grouper }} conflict-item" data-type="{{ conflict.type }}">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ conflict.schedule.course_code }} - {{ conflict.schedule.course_name }}</h6>
+                                    <small>{{ conflict.type }}</small>
+                                </div>
+                                <p class="mb-1">{{ conflict.message }}</p>
+                                {% if conflict.related_schedule %}
+                                <small>
+                                    Relacionado con: {{ conflict.related_schedule.course_code }} - 
+                                    {{ conflict.related_schedule.course_name }}
+                                </small>
+                                {% endif %}
+                                <div class="mt-2 text-muted">
+                                    <small>
+                                        {{ conflict.schedule.day }} {{ conflict.schedule.schedule }} |
+                                        {{ conflict.schedule.start_date|date:"d/m/Y" }} - 
+                                        {{ conflict.schedule.end_date|date:"d/m/Y" }}
+                                    </small>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>No se encontraron problemas
+                    </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% empty %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>No hay MPAs para validar
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+    .list-group-item-error {
+        color: #721c24;
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+    }
+    
+    .list-group-item-warning {
+        color: #856404;
+        background-color: #fff3cd;
+        border-color: #ffeeba;
+    }
+
+    .filter-btn.active {
+        font-weight: bold;
+    }
+
+    .btn-group {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+</style>
+{% endblock extra_css %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+       const filterButtons = document.querySelectorAll('.filter-btn');
+       const conflictItems = document.querySelectorAll('.conflict-item');
+       const intakeBlocks = document.querySelectorAll('.card-body.border-bottom');
+       const pdfExportButton = document.getElementById('pdfExportButton');
+       const baseUrl = pdfExportButton.getAttribute('data-base-url');
+    
+       filterButtons.forEach(button => {
+           button.addEventListener('click', function() {
+               // Remover active de todos los botones
+               filterButtons.forEach(btn => btn.classList.remove('active'));
+               // Agregar active al botón clickeado
+               this.classList.add('active');
+    
+               const filterType = this.dataset.filter;
+               
+               // Actualizar la URL del botón de exportación
+               if (filterType && filterType !== 'null') {
+                   pdfExportButton.href = `${baseUrl}?filter=${filterType}`;
+               } else {
+                   pdfExportButton.href = baseUrl;
+               }
+    
+               // Primero ocultar todos los INTAKEs y MPAs
+               intakeBlocks.forEach(intake => {
+                   intake.style.display = 'none';
+               });
+    
+               const mpaCards = document.querySelectorAll('.card.mb-4');
+               mpaCards.forEach(mpa => {
+                   mpa.style.display = 'none';
+               });
+    
+               if (filterType === 'all') {
+                   // Mostrar todos los elementos
+                   intakeBlocks.forEach(intake => {
+                       intake.style.display = 'block';
+                   });
+                   mpaCards.forEach(mpa => {
+                       mpa.style.display = 'block';
+                   });
+                   conflictItems.forEach(item => {
+                       item.style.display = 'block';
+                   });
+               } else {
+                   // Filtrar por tipo específico
+                   conflictItems.forEach(item => {
+                       const parentIntake = item.closest('.card-body.border-bottom');
+                       const parentMPA = item.closest('.card.mb-4');
+                       
+                       if (item.dataset.type === filterType) {
+                           item.style.display = 'block';
+                           if (parentIntake) {
+                               parentIntake.style.display = 'block';
+                           }
+                           if (parentMPA) {
+                               parentMPA.style.display = 'block';
+                           }
+                       } else {
+                           item.style.display = 'none';
+                       }
+                   });
+               }
+    
+               // Verificar y ocultar elementos vacíos
+               mpaCards.forEach(mpaCard => {
+                   const visibleIntakes = mpaCard.querySelectorAll('.card-body.border-bottom[style="display: block;"]');
+                   if (visibleIntakes.length === 0) {
+                       mpaCard.style.display = 'none';
+                   }
+               });
+    
+               intakeBlocks.forEach(intake => {
+                   const visibleConflicts = intake.querySelectorAll('.conflict-item[style="display: block;"]');
+                   if (visibleConflicts.length === 0) {
+                       intake.style.display = 'none';
+                   }
+               });
+           });
+       });
+    });
+    </script>
+{% endblock %}

@@ -1,0 +1,174 @@
+{% extends 'workmanager/base.html' %}
+
+{% block content %}
+<div class="card">
+   <div class="card-header d-flex justify-content-between align-items-center">
+       <h3>Vista General de Horarios</h3>
+       <div>
+           <a href="{% url 'meece_teacher:course_overview_pdf' %}" class="btn btn-primary me-2">
+               <i class="fas fa-file-pdf me-2"></i>Exportar PDF
+           </a>
+           <a href="{% url 'meece_teacher:teacher_manager' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver a Lista de Docentes
+            </a>
+       </div>
+   </div>
+   <div class="card-body">
+       {% if schedules %}
+           {% regroup schedules by teacher as teacher_list %}
+           {% for teacher in teacher_list %}
+           <div class="card mb-4">
+               <div class="card-header">
+                   <h5>{{ teacher.grouper.name }}</h5>
+               </div>
+               <div class="card-body">
+                   <div class="table-responsive">
+                       <table class="table table-hover">
+                           <thead>
+                               <tr>
+                                   <th>Asignatura</th>
+                                   <th>Código</th>
+                                   <th>Día</th>
+                                   <th>Horario</th>
+                                   <th>Periodo</th>
+                                   <th>Modalidad</th>
+                                   <th>MPA</th>
+                                   <th>Estado</th>
+                               </tr>
+                           </thead>
+                           <tbody>
+                               {% for schedule in teacher.list %}
+                               <tr>
+                                   <td>{{ schedule.course.name }}</td>
+                                   <td>{{ schedule.course.code }}</td>
+                                   <td>{{ schedule.get_day_display }}</td>
+                                   <td>{{ schedule.start_time|time:"H:i" }} - {{ schedule.end_time|time:"H:i" }}</td>
+                                   <td>{{ schedule.start_date|date:"d/m/Y" }} - {{ schedule.end_date|date:"d/m/Y" }}</td>
+                                   <td>{{ schedule.get_modality_display }}</td>
+                                   <td>
+                                       {% for match in schedule.mpa_conflicts %}
+                                           {% if match.type == 'coincide' %}
+                                               <span class="badge bg-success">
+                                                   <i class="fas fa-check me-1"></i>
+                                                   {{ match.sheet.intake }}
+                                               </span>
+                                           {% elif match.type == 'no_encontrado' %}
+                                               <span class="badge bg-danger">
+                                                   <i class="fas fa-times me-1"></i>No encontrado
+                                               </span>
+                                           {% endif %}
+                                       {% endfor %}
+                                   </td>
+                                   <td>
+                                       {% with has_conflicts=False has_mpa_match=False %}
+                                           {% for match in schedule.mpa_conflicts %}
+                                               {% if match.type == 'coincide' %}
+                                                   {% with has_mpa_match=True %}{% endwith %}
+                                               {% endif %}
+                                           {% endfor %}
+                                           
+                                           {% if schedule.conflicts %}
+                                               {% with has_conflicts=True %}{% endwith %}
+                                           {% endif %}
+                                           
+                                           {% if schedule.conflicts or not has_mpa_match %}
+                                               {% if schedule.conflicts or schedule.mpa_conflicts.0.intakes %}
+                                                   <div class="dropdown">
+                                                       <button class="btn btn-warning btn-sm dropdown-toggle" 
+                                                               type="button" 
+                                                               data-bs-toggle="dropdown" 
+                                                               aria-expanded="false">
+                                                           Ver Conflictos
+                                                       </button>
+                                                       <div class="dropdown-menu p-3" style="min-width: 400px;">
+                                                           {% if schedule.conflicts %}
+                                                           <h6 class="dropdown-header">Conflictos de Horario</h6>
+                                                           {% for conflict in schedule.conflicts %}
+                                                           <div class="alert alert-danger mb-2">
+                                                               {{ conflict.message }}
+                                                           </div>
+                                                           {% endfor %}
+                                                           {% endif %}
+
+                                                           {% for match in schedule.mpa_conflicts %}
+                                                               {% if match.type == 'no_encontrado' and match.intakes %}
+                                                               <h6 class="dropdown-header mt-2">INTAKEs revisados</h6>
+                                                               <div class="alert alert-warning mb-2">
+                                                                   <strong>No se encontró el horario en los siguientes INTAKEs:</strong>
+                                                                   <ul class="mt-2 mb-0">
+                                                                   {% for intake in match.intakes %}
+                                                                       <li>{{ intake }}</li>
+                                                                   {% endfor %}
+                                                                   </ul>
+                                                               </div>
+                                                               {% endif %}
+                                                           {% endfor %}
+                                                       </div>
+                                                   </div>
+                                               {% else %}
+                                                   <span class="badge bg-success">
+                                                       <i class="fas fa-check me-1"></i>OK
+                                                   </span>
+                                               {% endif %}
+                                           {% else %}
+                                               <span class="badge bg-success">
+                                                   <i class="fas fa-check me-1"></i>Sin conflictos
+                                               </span>
+                                           {% endif %}
+                                       {% endwith %}
+                                   </td>
+                               </tr>
+                               {% endfor %}
+                           </tbody>
+                       </table>
+                   </div>
+               </div>
+           </div>
+           {% endfor %}
+       {% else %}
+       <div class="alert alert-info">
+           No hay horarios registrados
+       </div>
+       {% endif %}
+   </div>
+</div>
+
+<style>
+   .dropdown-menu {
+       max-height: 400px;
+       overflow-y: auto;
+   }
+   
+   .table td {
+       vertical-align: middle;
+   }
+   
+   .alert {
+       margin-bottom: 0.5rem;
+   }
+   
+   .alert:last-child {
+       margin-bottom: 0;
+   }
+   
+   .table-responsive {
+       max-height: 600px;
+   }
+
+   .badge {
+       font-size: 0.85em;
+       padding: 0.5em 0.7em;
+   }
+
+   .dropdown-header {
+       font-weight: bold;
+       color: #495057;
+       padding: 0.5rem 0;
+   }
+
+   .small {
+       font-size: 0.875em;
+       color: #6c757d;
+   }
+</style>
+{% endblock %}

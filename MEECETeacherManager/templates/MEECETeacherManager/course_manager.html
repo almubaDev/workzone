@@ -1,0 +1,198 @@
+{% extends 'workmanager/base.html' %}
+{% load static %}
+
+{% block title %}Gestión de Asignaturas{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Gestión de Asignaturas</h1>
+        <div class="btn-group">
+            <a href="{% url 'meece_teacher:course_overview' %}" class="btn btn-info">
+                <i class="fas fa-list me-2"></i>Vista General
+            </a>
+            <a href="{% url 'meece_teacher:teacher_manager' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver
+            </a>
+        </div>
+    </div>
+
+    <!-- Formulario de creación -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Nueva Asignatura</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" id="createForm">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.code.id_for_label }}" class="form-label">Código</label>
+                        {{ form.code }}
+                        {% if form.code.errors %}
+                            <div class="invalid-feedback d-block">{{ form.code.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-8 mb-3">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">Nombre</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <div class="invalid-feedback d-block">{{ form.name.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Crear Asignatura
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista de asignaturas -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Asignaturas Registradas</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for course in courses %}
+                        <tr>
+                            <td>{{ course.code }}</td>
+                            <td>{{ course.name }}</td>
+                            <td>
+                                <button class="btn btn-warning btn-sm edit-course" 
+                                        data-course-id="{{ course.id }}"
+                                        data-course-code="{{ course.code }}"
+                                        data-course-name="{{ course.name }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm delete-course" 
+                                        data-course-id="{{ course.id }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center">No hay asignaturas registradas</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de edición -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Asignatura</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm" method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="edit_code" class="form-label">Código</label>
+                        <input type="text" class="form-control" id="edit_code" name="code">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_name" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="edit_name" name="name">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="submit" form="editForm" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Guardar Cambios
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de eliminación -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">¿Está seguro de que desea eliminar esta asignatura?</p>
+                <p class="text-danger mb-0"><small>Esta acción puede afectar a las cargas horarias asociadas.</small></p>
+            </div>
+            <div class="modal-footer">
+                <form id="deleteForm" method="post">
+                    {% csrf_token %}
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Variables globales
+    const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const editForm = document.getElementById('editForm');
+    const deleteForm = document.getElementById('deleteForm');
+
+    // Función para manejar la edición
+    function handleEdit(button) {
+        const courseData = button.dataset;
+        
+        // URLs actualizadas sin teacher_id
+        editForm.action = `/meece/courses/${courseData.courseId}/update/`;
+        
+        // Establecer los valores
+        document.getElementById('edit_code').value = courseData.courseCode;
+        document.getElementById('edit_name').value = courseData.courseName;
+        
+        editModal.show();
+    }
+
+    // Función para manejar la eliminación
+    function handleDelete(button) {
+        const courseId = button.dataset.courseId;
+        // URL actualizada sin teacher_id
+        deleteForm.action = `/meece/courses/${courseId}/delete/`;
+        deleteModal.show();
+    }
+
+    // Configurar los event listeners
+    document.querySelectorAll('.edit-course').forEach(button => {
+        button.addEventListener('click', () => handleEdit(button));
+    });
+
+    document.querySelectorAll('.delete-course').forEach(button => {
+        button.addEventListener('click', () => handleDelete(button));
+    });
+});
+</script>
+{% endblock %}

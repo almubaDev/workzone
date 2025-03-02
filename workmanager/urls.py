@@ -57,4 +57,9 @@ urlpatterns = [
        #Calendar
     path('api/calendar-events/', views.CalendarEventsAPI.as_view(), name='calendar_events_api'),
     
+    
+
+    path('workzone/apps/', views.WorkZoneAppManagerView.as_view(), name='workzone_app_manager'),
+    path('workzone/apps/<int:pk>/update/', views.WorkZoneAppUpdateView.as_view(), name='workzone_app_update'),
+    path('workzone/apps/<int:pk>/delete/', views.WorkZoneAppDeleteView.as_view(), name='workzone_app_delete'),
 ]

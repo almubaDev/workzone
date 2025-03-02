@@ -1,0 +1,607 @@
+{% extends 'workmanager/base.html' %}
+{% load static %}
+
+{% block title %}Gestión de Carga Horaria - {{ teacher.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Quitar restricción de ancho del contenedor */
+    .container-fluid {
+        max-width: none;
+        margin: 0 20px;
+    }
+
+    /* Resetear estilos de cards */
+    .card {
+        transition: none;
+        margin-bottom: 1rem;
+        width: max-content;
+        min-width: 100%;
+    }
+
+    .card:hover {
+        transform: none;
+        box-shadow: none !important;
+    }
+
+    /* Tabla con cabecera fija */
+    .table-container {
+        max-height: 70vh;
+        overflow-y: auto;
+        position: relative;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+    }
+
+    /* Estilos de la tabla */
+    .table {
+        width: max-content;
+        min-width: 100%;
+        margin-bottom: 0;
+    }
+
+    /* Manejo de celdas */
+    .table th, 
+    .table td {
+        padding: 0.75rem;
+        vertical-align: middle;
+    }
+
+    /* Anchos específicos para columnas */
+    .table th:first-child,
+    .table td:first-child {
+        min-width: 300px; /* Reducido de 400px */
+        max-width: 300px;
+        white-space: normal; /* Permitir multilínea */
+        word-wrap: break-word;
+        line-height: 1.2;
+    }
+
+    .table th:nth-child(2),
+    .table td:nth-child(2) {
+        min-width: 150px; /* Modalidad */
+    }
+
+    .table th:nth-child(3),
+    .table td:nth-child(3) {
+        min-width: 150px; /* INTAKE */
+    }
+
+    .table th:nth-child(4),
+    .table td:nth-child(4) {
+        min-width: 100px; /* Día */
+    }
+
+    .table th:nth-child(5),
+    .table td:nth-child(5) {
+        min-width: 120px; /* Horario */
+    }
+
+    .table th:nth-child(6),
+    .table td:nth-child(6) {
+        min-width: 200px; /* Periodo */
+    }
+
+    .table th:nth-child(7),
+    .table td:nth-child(7) {
+        min-width: 100px; /* Vacantes */
+    }
+
+    .table th:nth-child(8),
+    .table td:nth-child(8) {
+        min-width: 100px; /* Aceptada */
+    }
+
+    .table th:last-child,
+    .table td:last-child {
+        min-width: 150px; /* Acciones */
+        text-align: center;
+        padding-right: 20px;
+    }
+
+    /* Cabecera fija */
+    .table thead th {
+        position: sticky;
+        top: 0;
+        background-color: white !important;
+        border-bottom: 2px solid #dee2e6;
+        font-weight: 600;
+        z-index: 2;
+    }
+
+    /* Estilo para los botones */
+    .btn-group {
+        display: inline-flex;
+        gap: 0.25rem;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-group .btn {
+        padding: 0.25rem 0.5rem;
+    }
+
+    /* Hacer el ícono de clonar blanco */
+    .clone-schedule i {
+        color: white;
+    }
+
+    /* Quitar scroll horizontal */
+    .table-responsive {
+        overflow-x: visible;
+    }
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Carga Horaria - {{ teacher.name }}</h1>
+        <div class="btn-group">
+            <a href="{% url 'meece_teacher:course_manager' %}" class="btn btn-primary">
+                <i class="fas fa-book me-2"></i>Gestionar Asignaturas
+            </a>
+            <a href="{% url 'meece_teacher:teacher_schedule_pdf' teacher.id %}" class="btn btn-success">
+                <i class="fas fa-file-pdf me-2"></i>Exportar a PDF
+            </a>
+            <a href="{% url 'meece_teacher:teacher_detail' teacher.id %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver al Perfil
+            </a>
+        </div>
+    </div>
+
+    <!-- Formulario de creación -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Agregar Horario</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" id="createForm">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-8 mb-3">
+                        <label for="{{ form.course.id_for_label }}" class="form-label">Asignatura</label>
+                        {{ form.course }}
+                        {% if form.course.errors %}
+                            <div class="invalid-feedback d-block">{{ form.course.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.day.id_for_label }}" class="form-label">Día</label>
+                        {{ form.day }}
+                        {% if form.day.errors %}
+                            <div class="invalid-feedback d-block">{{ form.day.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label for="{{ form.start_time.id_for_label }}" class="form-label">Hora Inicio</label>
+                        {{ form.start_time }}
+                        {% if form.start_time.errors %}
+                            <div class="invalid-feedback d-block">{{ form.start_time.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="{{ form.end_time.id_for_label }}" class="form-label">Hora Término</label>
+                        {{ form.end_time }}
+                        {% if form.end_time.errors %}
+                            <div class="invalid-feedback d-block">{{ form.end_time.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="{{ form.modality.id_for_label }}" class="form-label">Modalidad</label>
+                        {{ form.modality }}
+                        {% if form.modality.errors %}
+                            <div class="invalid-feedback d-block">{{ form.modality.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="{{ form.vacancies.id_for_label }}" class="form-label">Vacantes</label>
+                        {{ form.vacancies }}
+                        {% if form.vacancies.errors %}
+                            <div class="invalid-feedback d-block">{{ form.vacancies.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.start_date.id_for_label }}" class="form-label">Fecha Inicio</label>
+                        {{ form.start_date }}
+                        {% if form.start_date.errors %}
+                            <div class="invalid-feedback d-block">{{ form.start_date.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.end_date.id_for_label }}" class="form-label">Fecha Término</label>
+                        {{ form.end_date }}
+                        {% if form.end_date.errors %}
+                            <div class="invalid-feedback d-block">{{ form.end_date.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.intake.id_for_label }}" class="form-label">INTAKE</label>
+                        {{ form.intake }}
+                        {% if form.intake.errors %}
+                            <div class="invalid-feedback d-block">{{ form.intake.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        {{ form.is_accepted }}
+                        <label class="form-check-label" for="{{ form.is_accepted.id_for_label }}">
+                            Aceptación de la Carga Horaria
+                        </label>
+                    </div>
+                    {% if form.is_accepted.errors %}
+                        <div class="invalid-feedback d-block">{{ form.is_accepted.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Agregar Horario
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista de horarios -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Horarios Registrados</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>Asignatura</th>
+                            <th>Modalidad</th>
+                            <th>INTAKE</th>
+                            <th>Día</th>
+                            <th>Horario</th>
+                            <th>Período</th>
+                            <th>Vacantes</th>
+                            <th>Aceptada</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for schedule in schedules %}
+                        <tr>
+                            <td>{{ schedule.course.code }} - {{ schedule.course.name }}</td>
+                            <td>{{ schedule.get_modality_display }}</td>
+                            <td>{{ schedule.intake }}</td>
+                            <td>{{ schedule.get_day_display }}</td>
+                            <td>{{ schedule.schedule_display }}</td>
+                            <td>{{ schedule.start_date|date:"d/m/Y" }} - {{ schedule.end_date|date:"d/m/Y" }}</td>
+                            <td>{{ schedule.vacancies }}</td>
+                            <td>{% if schedule.is_accepted %}Sí {% else %} Pendiente {% endif %}</td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-warning btn-sm edit-schedule" 
+                                            data-schedule-id="{{ schedule.id }}"
+                                            data-course="{{ schedule.course.id }}"
+                                            data-day="{{ schedule.day }}"
+                                            data-start-time="{{ schedule.start_time|time:'H:i' }}"
+                                            data-end-time="{{ schedule.end_time|time:'H:i' }}"
+                                            data-start-date="{{ schedule.start_date|date:'Y-m-d' }}"
+                                            data-end-date="{{ schedule.end_date|date:'Y-m-d' }}"
+                                            data-modality="{{ schedule.modality }}"
+                                            data-vacancies="{{ schedule.vacancies }}"
+                                            data-intake="{{ schedule.intake }}"
+                                            data-is-accepted="{{ schedule.is_accepted|yesno:'True,False' }}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-info btn-sm clone-schedule" 
+                                            data-schedule-id="{{ schedule.id }}"
+                                            data-course="{{ schedule.course.id }}"
+                                            data-day="{{ schedule.day }}"
+                                            data-start-time="{{ schedule.start_time|time:'H:i' }}"
+                                            data-end-time="{{ schedule.end_time|time:'H:i' }}"
+                                            data-start-date="{{ schedule.start_date|date:'Y-m-d' }}"
+                                            data-end-date="{{ schedule.end_date|date:'Y-m-d' }}"
+                                            data-modality="{{ schedule.modality }}"
+                                            data-vacancies="{{ schedule.vacancies }}"
+                                            data-intake="{{ schedule.intake }}"
+                                            data-is-accepted="{{ schedule.is_accepted|yesno:'True,False' }}">
+                                        <i class="fas fa-clone"></i>
+                                    </button>
+                                    <button class="btn btn-danger btn-sm delete-schedule" 
+                                            data-schedule-id="{{ schedule.id }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center">No hay horarios registrados</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de edición -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Horario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm" method="post">
+                    {% csrf_token %}
+                    <!-- Los campos se clonarán aquí -->
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="submit" form="editForm" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Guardar Cambios
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de eliminación -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">¿Está seguro de que desea eliminar este horario?</p>
+            </div>
+            <div class="modal-footer">
+                <form id="deleteForm" method="post">
+                    {% csrf_token %}
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Variables globales
+    const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const editForm = document.getElementById('editForm');
+    const deleteForm = document.getElementById('deleteForm');
+
+    function getMonthNumber(monthName) {
+        const months = {
+            "ENERO": 1, "FEBRERO": 2, "MARZO": 3, "ABRIL": 4,
+            "MAYO": 5, "JUNIO": 6, "JULIO": 7, "AGOSTO": 8,
+            "SEPTIEMBRE": 9, "OCTUBRE": 10, "NOVIEMBRE": 11, "DICIEMBRE": 12
+        };
+        return months[monthName.toUpperCase()] || 0; // Aseguramos que esté en mayúsculas
+    }
+
+    function sortTable() {
+        const table = document.querySelector("table tbody"); // Verificar si selecciona bien la tabla
+        if (!table) {
+            console.error("No se encontró la tabla.");
+            return;
+        }
+
+        const rows = Array.from(table.querySelectorAll("tr"));
+
+        rows.sort((rowA, rowB) => {
+            // Obtener el valor de INTAKE en ambas filas
+            const intakeA = rowA.cells[2]?.textContent.trim(); // Verificar si la columna es correcta
+            const intakeB = rowB.cells[2]?.textContent.trim();
+
+            console.log("Comparando:", intakeA, "vs", intakeB); // Verifica que extraiga los datos
+
+            if (!intakeA || !intakeB) return 0; // Si alguna fila está vacía, no cambia el orden
+
+            // Extraer año y mes
+            const [yearA, monthA] = intakeA.split(" ");
+            const [yearB, monthB] = intakeB.split(" ");
+
+            const numA = parseInt(yearA) * 100 + getMonthNumber(monthA);
+            const numB = parseInt(yearB) * 100 + getMonthNumber(monthB);
+
+            return numA - numB; // Orden ascendente
+        });
+
+        // Reordenar las filas en la tabla
+        rows.forEach(row => table.appendChild(row));
+    }
+
+    // Esperamos que toda la página cargue antes de ejecutar la función
+    window.onload = function () {
+        sortTable();
+    };
+
+
+    // Función para manejar la edición
+    function handleEdit(button) {
+        const scheduleData = button.dataset;
+        editForm.action = `/meece/schedule/${scheduleData.scheduleId}/update/`;
+    
+        // Limpiar el formulario antes de agregar nuevos campos
+        editForm.innerHTML = '';
+    
+        // Agregar token CSRF
+        const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]').cloneNode(true);
+        editForm.appendChild(csrfToken);
+    
+        // Crear campo Asignatura (Select)
+        const courseSelect = document.getElementById('id_course').cloneNode(true);
+        courseSelect.id = 'edit_course';
+        courseSelect.name = 'course';
+        courseSelect.classList.add('form-select');
+        courseSelect.value = scheduleData.course;
+    
+        const courseLabel = document.createElement('label');
+        courseLabel.textContent = "Asignatura";
+        courseLabel.setAttribute("for", "edit_course");
+        courseLabel.classList.add('form-label');
+    
+        // Crear Modalidad (Select)
+        const modalitySelect = document.getElementById('id_modality').cloneNode(true);
+        modalitySelect.id = 'edit_modality';
+        modalitySelect.name = 'modality';
+        modalitySelect.classList.add('form-select');
+        modalitySelect.value = scheduleData.modality;
+    
+        const modalityLabel = document.createElement('label');
+        modalityLabel.textContent = "Modalidad";
+        modalityLabel.setAttribute("for", "edit_modality");
+        modalityLabel.classList.add('form-label');
+    
+        // Lista de campos restantes
+        const fields = [
+            { label: "Día", name: "day", type: "text", value: scheduleData.day },
+            { label: "Hora Inicio", name: "start_time", type: "time", value: scheduleData.startTime },
+            { label: "Hora Término", name: "end_time", type: "time", value: scheduleData.endTime },
+            { label: "Fecha Inicio", name: "start_date", type: "date", value: scheduleData.startDate },
+            { label: "Fecha Término", name: "end_date", type: "date", value: scheduleData.endDate },
+            { label: "Vacantes", name: "vacancies", type: "number", value: scheduleData.vacancies },
+            { label: "INTAKE", name: "intake", type: "text", value: scheduleData.intake }
+        ];
+    
+        // Contenedor de la primera fila
+        const container = document.createElement('div');
+        container.classList.add('row');
+    
+        // Agregar Asignatura
+        const courseContainer = document.createElement('div');
+        courseContainer.classList.add('col-md-6', 'mb-3');
+        courseContainer.appendChild(courseLabel);
+        courseContainer.appendChild(courseSelect);
+        container.appendChild(courseContainer);
+    
+        // Agregar Modalidad
+        const modalityContainer = document.createElement('div');
+        modalityContainer.classList.add('col-md-6', 'mb-3');
+        modalityContainer.appendChild(modalityLabel);
+        modalityContainer.appendChild(modalitySelect);
+        container.appendChild(modalityContainer);
+    
+        // Generar los demás campos y agregarlos al formulario
+        fields.forEach(fieldData => {
+            const formGroup = document.createElement('div');
+            formGroup.classList.add('col-md-6', 'mb-3');
+    
+            const label = document.createElement('label');
+            label.classList.add('form-label');
+            label.textContent = fieldData.label;
+            label.setAttribute('for', 'edit_' + fieldData.name);
+    
+            const input = document.createElement('input');
+            input.classList.add('form-control');
+            input.type = fieldData.type;
+            input.name = fieldData.name;
+            input.id = 'edit_' + fieldData.name;
+            input.value = fieldData.value;
+    
+            formGroup.appendChild(label);
+            formGroup.appendChild(input);
+            container.appendChild(formGroup);
+        });
+    
+        // Segunda fila exclusiva para el checkbox "Aceptado"
+        const checkboxRow = document.createElement('div');
+        checkboxRow.classList.add('row', 'mt-3'); // Agregamos margen superior
+    
+        const checkboxContainer = document.createElement('div');
+        checkboxContainer.classList.add('col-md-12', 'mb-3');
+    
+        const checkboxDiv = document.createElement('div');
+        checkboxDiv.classList.add('form-check');
+    
+        const checkbox = document.createElement('input');
+        checkbox.classList.add('form-check-input');
+        checkbox.type = "checkbox";
+        checkbox.name = "is_accepted";
+        checkbox.id = "edit_is_accepted";
+        checkbox.checked = scheduleData.isAccepted === "True";
+    
+        const checkboxLabel = document.createElement('label');
+        checkboxLabel.classList.add('form-check-label');
+        checkboxLabel.setAttribute('for', 'edit_is_accepted');
+        checkboxLabel.textContent = "Aceptado";
+    
+        checkboxDiv.appendChild(checkbox);
+        checkboxDiv.appendChild(checkboxLabel);
+        checkboxContainer.appendChild(checkboxDiv);
+        checkboxRow.appendChild(checkboxContainer);
+    
+        // Agregar contenedores al formulario
+        editForm.appendChild(container);
+        editForm.appendChild(checkboxRow);
+    
+        // Mostrar el modal de edición
+        editModal.show();
+    }
+    
+
+    // Función para manejar la eliminación
+    function handleDelete(button) {
+        const scheduleId = button.dataset.scheduleId;
+        deleteForm.action = `/meece/schedule/${scheduleId}/delete/`;
+        deleteModal.show();
+    }
+
+    // Función para manejar la clonación
+    function handleClone(button) {
+        const scheduleId = button.dataset.scheduleId;
+
+        // Crear el formulario para la petición POST
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/meece/schedule/${scheduleId}/clone/`;
+
+        // Agregar token CSRF
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+
+        // Agregar el formulario al documento y enviarlo
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    // Configurar los event listeners
+    document.querySelectorAll('.edit-schedule').forEach(button => {
+        button.addEventListener('click', () => handleEdit(button));
+    });
+
+    document.querySelectorAll('.delete-schedule').forEach(button => {
+        button.addEventListener('click', () => handleDelete(button));
+    });
+
+    document.querySelectorAll('.clone-schedule').forEach(button => {
+        button.addEventListener('click', () => handleClone(button));
+    });
+
+});
+</script>
+{% endblock %}
+

@@ -8,7 +8,17 @@ class WorkZone(models.Model):
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='workzones')
-
+    updated_at = models.DateTimeField(auto_now=True)
+    color = models.CharField(max_length=50, blank=True, null=True)  # Nuevo campo
+    
+    def save(self, *args, **kwargs):
+        if not self.color:  # Si no tiene color asignado
+            from .utils import generate_unique_color
+            existing_colors = WorkZone.objects.exclude(id=self.id)\
+                                            .values_list('color', flat=True)
+            self.color = generate_unique_color(list(existing_colors))
+        super().save(*args, **kwargs)
+        
     def __str__(self):
         return self.name
 
@@ -130,3 +140,25 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.get_notification_type_display()} - {self.event.title}"
+    
+    
+    
+class WorkZoneApp(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    icon = models.CharField(max_length=50, help_text="Nombre del ícono de FontAwesome", default="fa-tool")
+    url_name = models.CharField(max_length=100, help_text="Nombre de la URL de la aplicación")
+    work_zone = models.ForeignKey(
+        WorkZone, 
+        on_delete=models.CASCADE, 
+        related_name='applications'
+    )
+    is_active = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['order', 'name']
+        
+    def __str__(self):
+        return f"{self.name} - {self.work_zone.name}"

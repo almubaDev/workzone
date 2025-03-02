@@ -472,3 +472,85 @@
 .dashboard-stat-card:hover {
     transform: translateY(-5px);
 }
+
+.activity-timeline .log-content {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.activity-timeline .log-content p {
+    margin-bottom: 0.5rem;
+}
+
+.activity-timeline .log-content ul,
+.activity-timeline .log-content ol {
+    padding-left: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.activity-timeline .log-content img {
+    max-width: 100%;
+    height: auto;
+    margin: 0.5rem 0;
+}
+
+.activity-timeline .log-content a {
+    color: #0d6efd;
+    text-decoration: none;
+}
+
+.activity-timeline .log-content a:hover {
+    text-decoration: underline;
+}
+/* Estilos para la leyenda personalizada */
+.chart-legend .legend-color-box {
+    max-width: 16px;
+    transition: transform 0.2s;
+}
+
+.chart-legend .col:hover .legend-color-box {
+    transform: scale(1.2);
+}
+
+.chart-legend .legend-text {
+    flex-grow: 1;
+}
+
+.chart-container {
+    margin-bottom: 1rem;
+}
+
+/* Estilos para la línea de tiempo de actividad */
+.activity-timeline .timeline-item {
+    position: relative;
+    padding-left: 1.5rem;
+    border-left: 2px solid #e9ecef;
+}
+
+.activity-timeline .timeline-item:last-child {
+    border-left-color: transparent;
+}
+
+.activity-timeline .fa-circle {
+    font-size: 0.5rem;
+    position: absolute;
+    left: -0.25rem;
+    top: 0.5rem;
+}
+
+.log-content {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.log-content p {
+    margin-bottom: 0.5rem;
+}
+
+.log-content ul, 
+.log-content ol {
+    padding-left: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+

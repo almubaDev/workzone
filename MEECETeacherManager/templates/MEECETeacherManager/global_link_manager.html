@@ -1,0 +1,251 @@
+{% extends 'workmanager/base.html' %}
+{% load static %}
+
+{% block title %}Gestión de Links Globales{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Gestión de Links Globales</h1>
+        <a href="{% url 'meece_teacher:teacher_manager' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Volver a Gestión de Docentes
+        </a>
+    </div>
+
+    <!-- Formulario de creación -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Nuevo Link Global</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" id="createForm">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">Nombre</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <div class="invalid-feedback d-block">{{ form.name.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.icon.id_for_label }}" class="form-label">Ícono</label>
+                        <div class="input-group">
+                            {{ form.icon }}
+                            <span class="input-group-text icon-preview">
+                                <i class="fas fa-link"></i>
+                            </span>
+                        </div>
+                        {% if form.icon.errors %}
+                            <div class="invalid-feedback d-block">{{ form.icon.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">Descripción</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">{{ form.description.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Crear Link Global
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista de links globales -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Links Globales Existentes</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Ícono</th>
+                            <th>Nombre</th>
+                            <th>Descripción</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for link in links %}
+                        <tr>
+                            <td class="text-center">
+                                <i class="fas {{ link.icon }}"></i>
+                            </td>
+                            <td>{{ link.name }}</td>
+                            <td>{{ link.description|truncatechars:100 }}</td>
+                            <td>
+                                <button class="btn btn-warning btn-sm edit-link" 
+                                        data-link-id="{{ link.id }}"
+                                        data-link-name="{{ link.name }}"
+                                        data-link-description="{{ link.description }}"
+                                        data-link-icon="{{ link.icon }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm delete-link" 
+                                        data-link-id="{{ link.id }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center">No hay links globales registrados</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de edición -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Link Global</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm" method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" class="form-control" name="name" id="edit_name">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ícono</label>
+                        <div class="input-group ">
+                            <select class="form-select" name="icon" id="edit_icon">
+                                <option value="fa-link">Link</option>
+                                <option value="fa-book">Libro/Publicación</option>
+                                <option value="fa-globe">Sitio Web</option>
+                                <option value="fa-file">Documento</option>
+                                <option value="fa-video">Video</option>
+                            </select>
+                     
+                            <span class="input-group-text icon-preview">
+                                <i class="fas"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea class="form-control" name="description" id="edit_description" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="submit" form="editForm" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Guardar Cambios
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de eliminación -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">¿Está seguro de que desea eliminar este link global?</p>
+                <p class="text-danger mb-0"><small>Esta acción eliminará el link para todos los docentes.</small></p>
+            </div>
+            <div class="modal-footer">
+                <form id="deleteForm" method="post">
+                    {% csrf_token %}
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Variables globales
+    const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const editForm = document.getElementById('editForm');
+    const deleteForm = document.getElementById('deleteForm');
+
+    // Función para actualizar la previsualización del ícono
+    function updateIconPreview(select) {
+        const preview = select.closest('.input-group').querySelector('.icon-preview i');
+        preview.className = 'fas ' + select.value;
+    }
+
+    // Configurar previsualización de íconos para el formulario de creación
+    const createIconSelect = document.querySelector('#createForm select');
+    if (createIconSelect) {
+        createIconSelect.addEventListener('change', function() {
+            updateIconPreview(this);
+        });
+        updateIconPreview(createIconSelect);
+    }
+
+    // Función para manejar la edición
+    function handleEdit(button) {
+        const linkData = button.dataset;
+        console.log(linkData.linkId)
+        // Establecer la acción del formulario
+        editForm.action = `/meece/global-links/${linkData.linkId}/update/`;
+        
+        // Establecer los valores
+        document.getElementById('edit_name').value = linkData.linkName;
+        document.getElementById('edit_description').value = linkData.linkDescription;
+        const iconSelect = document.getElementById('edit_icon');
+        iconSelect.value = linkData.linkIcon;
+        updateIconPreview(iconSelect);
+        
+        // Configurar previsualización de íconos para el formulario de edición
+        iconSelect.addEventListener('change', function() {
+            updateIconPreview(this);
+        });
+        
+        editModal.show();
+    }
+
+    // Función para manejar la eliminación
+    function handleDelete(button) {
+        const linkId = button.dataset.linkId;
+        deleteForm.action = `/meece/global-links/${linkId}/delete/`;
+        deleteModal.show();
+    }
+
+    // Configurar los event listeners
+    document.querySelectorAll('.edit-link').forEach(button => {
+        button.addEventListener('click', () => handleEdit(button));
+    });
+
+    document.querySelectorAll('.delete-link').forEach(button => {
+        button.addEventListener('click', () => handleDelete(button));
+    });
+});
+</script>
+{% endblock %}

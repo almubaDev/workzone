@@ -1,0 +1,339 @@
+{% extends 'workmanager/base.html' %}
+{% load static %}
+
+{% block title %}Detalles del Docente{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Encabezado con botón de volver -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{{ teacher.name }}</h1>
+        <a href="{% url 'meece_teacher:teacher_manager' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Volver a Lista de Docentes
+        </a>
+    </div>
+
+    <!-- Tarjeta de Datos Básicos -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Datos Básicos</h5>
+            <div>
+                <button class="btn btn-warning btn-sm edit-teacher" 
+                        data-teacher-id="{{ teacher.id }}"
+                        data-teacher-name="{{ teacher.name }}"
+                        data-teacher-rut="{{ teacher.rut }}">
+                    <i class="fas fa-edit me-1"></i>Editar
+                </button>
+                <button class="btn btn-danger btn-sm delete-teacher" 
+                        data-teacher-id="{{ teacher.id }}">
+                    <i class="fas fa-trash me-1"></i>Eliminar
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">Nombre:</dt>
+                <dd class="col-sm-9">{{ teacher.name }}</dd>
+                
+                <dt class="col-sm-3">RUT:</dt>
+                <dd class="col-sm-9">{{ teacher.rut }}</dd>
+                
+                <dt class="col-sm-3">Fecha de Registro:</dt>
+                <dd class="col-sm-9">{{ teacher.created_at|date:"d/m/Y H:i" }}</dd>
+            </dl>
+        </div>
+    </div>
+
+    <!-- Tarjeta de Perfil -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Perfil del Docente</h5>
+            <div>
+                {% if teacher.profile %}
+                    <a href="{% url 'meece_teacher:teacher_profile_update' teacher.id %}" 
+                       class="btn btn-warning btn-sm">
+                        <i class="fas fa-edit me-1"></i>Editar Perfil
+                    </a>
+                    <a href="{% url 'meece_teacher:teacher_profile_pdf' teacher.id %}" 
+                        class="btn btn-info btn-sm me-2">
+                         <i class="fas fa-file-pdf me-1"></i>Exportar PDF
+                    </a>
+                {% else %}
+                    <a href="{% url 'meece_teacher:teacher_profile_create' teacher.id %}" 
+                       class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus me-1"></i>Crear Perfil
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body">
+            {% if teacher.profile %}
+                <dl class="row mb-0">
+                    <dt class="col-sm-3">Categoría:</dt>
+                    <dd class="col-sm-9">{{ teacher.profile.category.name }}</dd>
+                    
+                    <dt class="col-sm-3">Correo Institucional:</dt>
+                    <dd class="col-sm-9">{{ teacher.profile.institutional_email }}</dd>
+                    
+                    <dt class="col-sm-3">Correo Personal:</dt>
+                    <dd class="col-sm-9">{{ teacher.profile.personal_email|default:"No especificado" }}</dd>
+                    
+                    <dt class="col-sm-3">Celular:</dt>
+                    <dd class="col-sm-9">+{{ teacher.profile.phone|default:"No especificado" }}</dd>
+                    
+                    <dt class="col-sm-3">Profesión:</dt>
+                    <dd class="col-sm-9">{{ teacher.profile.profession }}</dd>
+                    
+                    <dt class="col-sm-3">Grado Académico:</dt>
+                    <dd class="col-sm-9">{{ teacher.profile.academic_degree }}</dd>
+                </dl>
+            {% else %}
+                <p class="text-muted mb-0">No se ha creado un perfil para este docente.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% comment %} Asignaturas Card {% endcomment %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Carga Horaria</h5>
+        <div>
+            <a href="{% url 'meece_teacher:teacher_schedule' teacher.id %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-calendar-alt me-1"></i>Gestionar Carga Horaria
+            </a>
+            {% if teacher.schedules.exists %}
+            <a href="{% url 'meece_teacher:teacher_schedule_pdf' teacher.id %}" 
+            class="btn btn-info btn-sm">
+                <i class="fas fa-file-pdf me-1"></i>Exportar PDF
+             </a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body">
+        {% if teacher.schedules.exists %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Asignatura</th>
+                            <th>Modalidad</th>
+                            <th>INTAKE</th>
+                            <th>Día</th>
+                            <th>Horario</th>
+                            <th>Período</th>
+                            <th>Vacantes</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for schedule in teacher.schedules.all %}
+                        <tr>
+                            <td>{{ schedule.course.code }}</td>
+                            <td>{{ schedule.course.name }}</td>
+                            <td>{{ schedule.get_modality_display }}</td>
+                            <td>{{ schedule.intake }}</td>
+                            <td>{{ schedule.get_day_display }}</td>
+                            <td>{{ schedule.schedule_display }}</td>
+                            <td>{{ schedule.start_date|date:"d/m/Y" }} - {{ schedule.end_date|date:"d/m/Y" }}</td>
+                            <td>{{ schedule.vacancies }}</td>
+                            <td>
+                                <span class="badge {% if schedule.is_accepted %}bg-success{% else %}bg-warning{% endif %}">
+                                    {% if schedule.is_accepted %}
+                                        Aceptada
+                                    {% else %}
+                                        Pendiente
+                                    {% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted mb-0">No hay carga horaria registrada para este docente.</p>
+        {% endif %}
+    </div>
+</div>
+
+
+
+{% comment %} Link card {% endcomment %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Links del Docente</h5>
+        <div>
+            <a href="{% url 'meece_teacher:teacher_global_links' teacher.id %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-link me-1"></i>Gestionar Links
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if teacher.global_link_urls.exists %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Nombre</th>
+                            <th>URL</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for link_url in teacher.global_link_urls.all %}
+                        <tr>
+                            <td>
+                                <i class="fas {{ link_url.global_link.icon }} me-2"></i>
+                                Link Global
+                            </td>
+                            <td>{{ link_url.global_link.name }}</td>
+                            <td>
+                                {% if link_url.url %}
+                                    <a href="{{ link_url.url }}" target="_blank" class="btn btn-link btn-sm">
+                                        <i class="fas fa-external-link-alt me-1"></i>Abrir Link
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">URL no configurada</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge {% if link_url.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ link_url.is_active|yesno:"Activo,Inactivo" }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% for link in teacher.personal_links.all %}
+                        <tr>
+                            <td>
+                                <i class="fas {{ link.icon }} me-2"></i>
+                                Link Personal
+                            </td>
+                            <td>{{ link.name }}</td>
+                            <td>
+                                <a href="{{ link.url }}" target="_blank" class="btn btn-link btn-sm">
+                                    <i class="fas fa-external-link-alt me-1"></i>Abrir Link
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">Personal</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted mb-0">No hay links configurados para este docente.</p>
+        {% endif %}
+    </div>
+</div>
+
+
+
+<!-- Modal de edición para datos básicos -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Datos Básicos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm" method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="edit_name" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="edit_name" name="name">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_rut" class="form-label">RUT</label>
+                        <input type="text" class="form-control" id="edit_rut" name="rut">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="submit" form="editForm" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Guardar Cambios
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de eliminación -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">¿Está seguro de que desea eliminar este docente?</p>
+                <p class="text-danger mb-0"><small>Esta acción no se puede deshacer.</small></p>
+            </div>
+            <div class="modal-footer">
+                <form id="deleteForm" method="post">
+                    {% csrf_token %}
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Variables globales
+    const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const editForm = document.getElementById('editForm');
+    const deleteForm = document.getElementById('deleteForm');
+
+    // Función para manejar la edición
+    function handleEdit(button) {
+        const teacherData = button.dataset;
+        
+        // Establecer la acción del formulario
+        editForm.action = `/meece/${teacherData.teacherId}/update/`;
+        
+        // Establecer los valores
+        document.getElementById('edit_name').value = teacherData.teacherName;
+        document.getElementById('edit_rut').value = teacherData.teacherRut;
+        
+        editModal.show();
+    }
+
+    // Función para manejar la eliminación
+    function handleDelete(button) {
+        const teacherId = button.dataset.teacherId;
+        deleteForm.action = `/meece/${teacherId}/delete/`;
+        deleteModal.show();
+    }
+
+    // Configurar los event listeners
+    document.querySelectorAll('.edit-teacher').forEach(button => {
+        button.addEventListener('click', () => handleEdit(button));
+    });
+
+    document.querySelectorAll('.delete-teacher').forEach(button => {
+        button.addEventListener('click', () => handleDelete(button));
+    });
+});
+</script>
+{% endblock %}

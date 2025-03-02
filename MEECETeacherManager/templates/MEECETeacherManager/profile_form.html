@@ -1,0 +1,86 @@
+{% extends 'workmanager/base.html' %}
+{% load static %}
+
+{% block title %}{% if teacher.profile %}Editar{% else %}Crear{% endif %} Perfil del Docente{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{% if teacher.profile %}Editar{% else %}Crear{% endif %} Perfil - {{ teacher.name }}</h1>
+        <a href="{% url 'meece_teacher:teacher_detail' teacher.id %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Volver al Detalle
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Información del Perfil</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.category.id_for_label }}" class="form-label">Categoría</label>
+                        {{ form.category }}
+                        {% if form.category.errors %}
+                            <div class="invalid-feedback d-block">{{ form.category.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.institutional_email.id_for_label }}" class="form-label">Correo Institucional</label>
+                        {{ form.institutional_email }}
+                        {% if form.institutional_email.errors %}
+                            <div class="invalid-feedback d-block">{{ form.institutional_email.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.personal_email.id_for_label }}" class="form-label">Correo Personal</label>
+                        {{ form.personal_email }}
+                        {% if form.personal_email.errors %}
+                            <div class="invalid-feedback d-block">{{ form.personal_email.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.phone.id_for_label }}" class="form-label">Celular</label>
+                        {{ form.phone }}
+                        {% if form.phone.errors %}
+                            <div class="invalid-feedback d-block">{{ form.phone.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.profession.id_for_label }}" class="form-label">Profesión</label>
+                        {{ form.profession }}
+                        {% if form.profession.errors %}
+                            <div class="invalid-feedback d-block">{{ form.profession.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.academic_degree.id_for_label }}" class="form-label">Grado Académico</label>
+                        {{ form.academic_degree }}
+                        {% if form.academic_degree.errors %}
+                            <div class="invalid-feedback d-block">{{ form.academic_degree.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Guardar Perfil
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

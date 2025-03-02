@@ -1,0 +1,366 @@
+{% extends 'workmanager/base.html' %}
+{% load static %}
+
+{% block title %}Gestión de Aplicaciones{% endblock %}
+
+{% block extra_head %}
+<style>
+    .app-icon {
+        width: 30px;
+        text-align: center;
+    }
+    .icon-select option {
+        padding: 8px;
+    }
+    .icon-preview-container {
+        display: flex;
+        align-items: center;
+        margin-top: 8px;
+    }
+    .icon-preview {
+        margin-left: 10px;
+        font-size: 1.2em;
+    }
+    .icon-label {
+        margin-left: 8px;
+        color: #666;
+    }
+    .icon-select-group {
+        position: relative;
+    }
+    .app-table .fa-fw {
+        width: 1.25em;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Gestión de Aplicaciones</h1>
+        <a href="{% url 'workzone_list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Volver a Zonas de Trabajo
+        </a>
+    </div>
+
+    <!-- Filtro por zona de trabajo -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row align-items-end">
+                <div class="col-md-4">
+                    <label for="work_zone" class="form-label">Filtrar por Zona de Trabajo</label>
+                    <select name="work_zone" id="work_zone" class="form-select">
+                        <option value="">Todas las zonas</option>
+                        {% for zone in work_zones %}
+                        <option value="{{ zone.id }}" {% if selected_zone|stringformat:"s" == zone.id|stringformat:"s" %}selected{% endif %}>
+                            {{ zone.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter me-2"></i>Filtrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Formulario de creación -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Nueva Aplicación</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" id="createForm">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">Nombre</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <div class="invalid-feedback d-block">{{ form.name.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.url_name.id_for_label }}" class="form-label">Nombre URL</label>
+                        {{ form.url_name }}
+                        {% if form.url_name.errors %}
+                            <div class="invalid-feedback d-block">{{ form.url_name.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.icon.id_for_label }}" class="form-label">Ícono</label>
+                        <div class="icon-select-group">
+                            {{ form.icon }}
+                            <div class="icon-preview-container">
+                                <i class="fas icon-preview"></i>
+                                <span class="icon-label"></span>
+                            </div>
+                        </div>
+                        {% if form.icon.errors %}
+                            <div class="invalid-feedback d-block">{{ form.icon.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.work_zone.id_for_label }}" class="form-label">Zona de Trabajo</label>
+                        {{ form.work_zone }}
+                        {% if form.work_zone.errors %}
+                            <div class="invalid-feedback d-block">{{ form.work_zone.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label for="{{ form.order.id_for_label }}" class="form-label">Orden</label>
+                        {{ form.order }}
+                        {% if form.order.errors %}
+                            <div class="invalid-feedback d-block">{{ form.order.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="form-check mt-4">
+                            {{ form.is_active }}
+                            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                Activo
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">Descripción</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">{{ form.description.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Crear Aplicación
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista de aplicaciones -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Aplicaciones Existentes</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped app-table">
+                    <thead>
+                        <tr>
+                            <th>Ícono</th>
+                            <th>Nombre</th>
+                            <th>Zona de Trabajo</th>
+                            <th>URL</th>
+                            <th>Orden</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for app in apps %}
+                        <tr>
+                            <td class="app-icon">
+                                <i class="fas {{ app.icon }} fa-fw"></i>
+                            </td>
+                            <td>{{ app.name }}</td>
+                            <td>{{ app.work_zone.name }}</td>
+                            <td><code>{{ app.url_name }}</code></td>
+                            <td>{{ app.order }}</td>
+                            <td>
+                                <span class="badge {% if app.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ app.is_active|yesno:"Activo,Inactivo" }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-warning btn-sm edit-app" 
+                                        data-app-id="{{ app.id }}"
+                                        data-app-name="{{ app.name }}"
+                                        data-app-description="{{ app.description }}"
+                                        data-app-icon="{{ app.icon }}"
+                                        data-app-url="{{ app.url_name }}"
+                                        data-app-order="{{ app.order }}"
+                                        data-app-workzone="{{ app.work_zone.id }}"
+                                        data-app-active="{{ app.is_active|yesno:'true,false' }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm delete-app" data-app-id="{{ app.id }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">No hay aplicaciones configuradas</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de edición -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Aplicación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm" method="post">
+                    {% csrf_token %}
+                    <!-- Los campos del formulario se clonarán aquí mediante JavaScript -->
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="submit" form="editForm" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Guardar Cambios
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- Modal de confirmación de eliminación -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">¿Está seguro de que desea eliminar esta aplicación?</p>
+            </div>
+            <div class="modal-footer">
+                <form id="deleteForm" method="post">
+                    {% csrf_token %}
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Variables globales para el script
+    const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const editForm = document.getElementById('editForm');
+    const deleteForm = document.getElementById('deleteForm');
+    const filterSelect = document.querySelector('#work_zone');
+
+    // Función para inicializar el selector de íconos
+    function initializeIconSelect(container) {
+        const iconSelect = container.querySelector('.icon-select');
+        const iconPreview = container.querySelector('.icon-preview');
+        const iconLabel = container.querySelector('.icon-label');
+
+        if (iconSelect && iconPreview && iconLabel) {
+            function updateIconPreview() {
+                const selectedOption = iconSelect.options[iconSelect.selectedIndex];
+                const iconClass = selectedOption.value;
+                const iconName = selectedOption.text;
+                
+                iconPreview.className = 'fas ' + iconClass;
+                iconLabel.textContent = iconName;
+            }
+
+            iconSelect.addEventListener('change', updateIconPreview);
+            updateIconPreview();
+        }
+    }
+
+    // Función para manejar la edición
+    function handleEdit(button) {
+        const appData = button.dataset;
+        
+        // Clonar los campos del formulario de creación
+        const createForm = document.getElementById('createForm');
+        const formFields = createForm.cloneNode(true);
+        
+        // Limpiar el formulario de edición y agregar los campos clonados
+        editForm.innerHTML = '';
+        editForm.appendChild(formFields.querySelector('input[name="csrfmiddlewaretoken"]'));
+        const fields = formFields.querySelectorAll('.form-control, .form-select, .form-check-input');
+        
+        fields.forEach(field => {
+            const newField = field.cloneNode(true);
+            newField.id = 'edit_' + field.id;
+            const parent = field.parentElement.cloneNode(true);
+            parent.querySelector('input, select, textarea').id = newField.id;
+            editForm.appendChild(parent);
+        });
+        
+        editForm.action = `/workzone/apps/${appData.appId}/update/`;
+        
+        // Establecer los valores
+        editForm.querySelector('#edit_id_name').value = appData.appName;
+        editForm.querySelector('#edit_id_description').value = appData.appDescription;
+        editForm.querySelector('#edit_id_icon').value = appData.appIcon;
+        editForm.querySelector('#edit_id_url_name').value = appData.appUrl;
+        editForm.querySelector('#edit_id_order').value = appData.appOrder;
+        editForm.querySelector('#edit_id_work_zone').value = appData.appWorkzone;
+        editForm.querySelector('#edit_id_is_active').checked = appData.appActive === 'true';
+        
+        initializeIconSelect(editForm);
+        editModal.show();
+    }
+
+    // Función para manejar la eliminación
+    function handleDelete(button) {
+        const appId = button.dataset.appId;
+        deleteForm.action = `/workzone/apps/${appId}/delete/`;
+        deleteModal.show();
+    }
+
+    // Inicializar funcionalidades
+    function initializeEventListeners() {
+        // Inicializar selector de íconos en el formulario principal
+        initializeIconSelect(document);
+
+        // Configurar botones de edición
+        document.querySelectorAll('.edit-app').forEach(button => {
+            button.addEventListener('click', () => handleEdit(button));
+        });
+
+        // Configurar botones de eliminación
+        document.querySelectorAll('.delete-app').forEach(button => {
+            button.addEventListener('click', () => handleDelete(button));
+        });
+
+        // Configurar filtro automático
+        if (filterSelect) {
+            filterSelect.addEventListener('change', function() {
+                this.form.submit();
+            });
+        }
+    }
+
+    // Iniciar todo
+    initializeEventListeners();
+});
+</script>
+{% endblock %}
