@@ -140,6 +140,88 @@
     text-overflow: ellipsis;
 }
 
+/* NUEVO: Aumentando el tamaño de los eventos en el timeline */
+.timeline-event {
+    height: 45px !important;
+    width: 45px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 10 !important;
+    cursor: pointer !important;
+    transition: transform 0.2s, box-shadow 0.2s !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+}
+
+.timeline-event:hover {
+    transform: scale(1.1) !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+}
+
+.event-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    height: 100%;
+    width: 100%;
+    color: white;
+    font-weight: bold;
+}
+
+.event-content i {
+    font-size: 22px !important;
+    margin-bottom: 4px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3) !important;
+}
+
+.event-title {
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+    display: none; /* Ocultar título, se mostrará en tooltip */
+}
+
+/* Estilos para el modal de detalles del evento */
+.event-detail-modal .modal-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.event-detail-modal .event-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.event-detail-modal .event-icon i {
+    font-size: 28px;
+    color: white;
+}
+
+.event-detail-modal .event-info {
+    margin-bottom: 20px;
+}
+
+.event-detail-modal .event-info p {
+    margin-bottom: 5px;
+}
+
+.event-detail-modal .event-info .label {
+    font-weight: bold;
+    color: #6c757d;
+}
+
 /* Controles de navegación */
 .nav-arrows {
     position: absolute;
@@ -147,8 +229,8 @@
     background: white;
     border: 1px solid #dee2e6;
     border-radius: 50%;
-    width: 32px;
-    height: 32px;
+    width: 40px; /* NUEVO: Aumento del tamaño del botón */
+    height: 40px; /* NUEVO: Aumento del tamaño del botón */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -158,6 +240,10 @@
 
 .nav-arrows:hover {
     background: #f8f9fa;
+}
+
+.nav-arrows i {
+    font-size: 16px; /* NUEVO: Aumento del tamaño del ícono */
 }
 
 .nav-arrows.left { left: 20px; top: 50%; transform: translateY(-50%); }
@@ -212,6 +298,75 @@
 .form-select.is-invalid ~ .invalid-feedback {
     display: block;
 }
+
+/* Toast personalizado */
+.custom-toast {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 9999;
+    max-width: 350px;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.custom-toast.show {
+    opacity: 1;
+}
+
+/* Botones de acción para eventos */
+.event-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.btn-event-action {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #dee2e6;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.btn-event-action:hover {
+    transform: scale(1.1);
+}
+
+.btn-event-action.edit {
+    color: white;
+    background-color: #2980b9;
+}
+
+.btn-event-action.delete {
+    color: white;
+    background-color: #e74c3c;
+}
+
+/* Destacar botones de modal principal */
+.modal-footer .btn {
+    padding: 8px 16px;
+    font-weight: 500;
+}
+
+/* Tooltips personalizados para el timeline */
+.vis-tooltip {
+    background-color: rgba(0, 0, 0, 0.8) !important;
+    color: white !important;
+    padding: 8px 12px !important;
+    border-radius: 4px !important;
+    font-size: 14px !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+    max-width: 300px !important;
+    border: none !important;
+}
 </style>
 {% endblock %}
 
@@ -241,10 +396,30 @@
             </div>
 
             <div class="ms-auto">
+                <a href="{% url 'meece_teacher:mpa_detail' mpa.id %}" class="btn btn-secondary btn-sm me-2">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </a>
                 <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#eventModal">
                     <i class="fas fa-plus"></i> Nuevo Evento
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Mensaje de error (nuevo para depuración) -->
+    {% if error %}
+    <div class="alert alert-danger m-3">
+        <h4>Error:</h4>
+        <p>{{ error }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Alerta personalizada tipo toast -->
+    <div class="custom-toast alert alert-success shadow" id="successToast" role="alert">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-check-circle me-2"></i>
+            <div id="toastMessage">Operación completada con éxito</div>
+            <button type="button" class="btn-close ms-auto" aria-label="Close" onclick="hideToast()"></button>
         </div>
     </div>
 
@@ -268,7 +443,18 @@
             </button>
         </div>
 
+        <!-- Contenedor del timeline -->
         <div id="visualization"></div>
+
+        <!-- Fallback si no hay datos (nuevo) -->
+        {% if timeline_data|length == 0 %}
+        <div class="alert alert-info m-4">
+            <i class="fas fa-info-circle me-2"></i>
+            No hay datos de INTAKEs o cursos para mostrar en el timeline.
+            <br>
+            <small>Puedes agregar eventos manuales usando el botón "Nuevo Evento".</small>
+        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -325,6 +511,133 @@
         </div>
     </div>
 </div>
+
+<!-- Modal de detalles del evento -->
+<div class="modal fade event-detail-modal" id="eventDetailModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalles del Evento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="event-icon" id="detail_event_icon_container">
+                    <i class="fas" id="detail_event_icon"></i>
+                </div>
+                <div class="event-info">
+                    <h4 id="detail_event_name" class="mb-3"></h4>
+                    <p><span class="label">Tipo:</span> <span id="detail_event_type"></span></p>
+                    <p><span class="label">Fecha:</span> <span id="detail_event_date"></span></p>
+                    <p><span class="label">Creado por:</span> <span id="detail_event_creator">{{ request.user.username }}</span></p>
+                </div>
+                <div class="event-actions">
+                    <button type="button" class="btn-event-action edit" id="btnEditEvent" title="Editar evento">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button type="button" class="btn-event-action delete" id="btnDeleteEvent" title="Eliminar evento">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de edición de evento -->
+<div class="modal fade" id="editEventModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Evento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editEventForm" class="event-form" method="post">
+                {% csrf_token %}
+                <input type="hidden" id="edit_event_id" name="event_id">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Título</label>
+                        <input type="text" class="form-control" id="edit_title" name="title">
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Tipo</label>
+                        <select class="form-select" id="edit_event_type" name="event_type">
+                            <option value="GENERAL">Evento General</option>
+                            <option value="COURSE_START">Inicio de Curso</option>
+                            <option value="COURSE_END">Término de Curso</option>
+                            <option value="MILESTONE">Hito</option>
+                            <option value="ALERT">Alerta</option>
+                        </select>
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Fecha</label>
+                        <input type="datetime-local" class="form-control" id="edit_event_date" name="event_date">
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Color</label>
+                        <div class="input-group">
+                            <div class="color-preview me-2" id="edit_color_preview"></div>
+                            <input type="color" class="form-control form-control-color" id="edit_color" name="color" value="#3498db">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Ícono</label>
+                        <select class="form-select" id="edit_icon" name="icon">
+                            <option value="fa-star">Estrella</option>
+                            <option value="fa-flag">Bandera</option>
+                            <option value="fa-exclamation-circle">Alerta</option>
+                            <option value="fa-check-circle">Check</option>
+                            <option value="fa-info-circle">Info</option>
+                            <option value="fa-calendar">Calendario</option>
+                            <option value="fa-clock">Reloj</option>
+                        </select>
+                        <div class="icon-preview mt-2">
+                            <i class="fas" id="edit_icon_preview"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación de eliminación -->
+<div class="modal fade" id="deleteEventModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Está seguro que desea eliminar este evento?</p>
+                <p><strong>Esta acción no se puede deshacer.</strong></p>
+            </div>
+            <div class="modal-footer">
+                <form id="deleteEventForm" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" id="delete_event_id" name="event_id">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 
@@ -332,274 +645,531 @@
 <script src="https://unpkg.com/vis-timeline@7.7.2/standalone/umd/vis-timeline-graph2d.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded - Timeline initialization starting');
+    
+    // Referencias DOM
     var container = document.getElementById('visualization');
+    if (!container) {
+        console.error('Timeline container not found!');
+        return;
+    }
+    
+    // Inicializar DataSet y timeline
     var items = new vis.DataSet();
+    var timeline = null;
     var currentOrder = 0;
+    var currentEventData = null;  // Para almacenar datos del evento seleccionado
 
+    // Función para mostrar mensajes toast
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('successToast');
+        if (!toast) return;
+        
+        toast.classList.remove('alert-success', 'alert-danger', 'alert-warning');
+        toast.classList.add(`alert-${type}`);
+        
+        document.getElementById('toastMessage').textContent = message;
+        toast.classList.add('show');
+        
+        // Auto-ocultar después de 3 segundos
+        setTimeout(hideToast, 3000);
+    }
+
+    // Función para ocultar el toast
+    window.hideToast = function() {
+        const toast = document.getElementById('successToast');
+        if (!toast) return;
+        toast.classList.remove('show');
+    };
+
+    // Función para formatear fecha para input datetime-local
+    function formatDateTimeForInput(date) {
+        if (!(date instanceof Date) || isNaN(date.getTime())) {
+            date = new Date(); // Si la fecha no es válida, usar la fecha actual
+        }
+        
+        // Format: YYYY-MM-DDTHH:MM
+        return date.getFullYear() + '-' + 
+               String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+               String(date.getDate()).padStart(2, '0') + 'T' + 
+               String(date.getHours()).padStart(2, '0') + ':' + 
+               String(date.getMinutes()).padStart(2, '0');
+    }
+
+    // Función para formatear fecha para mostrar
+    function formatDisplayDate(date) {
+        if (!(date instanceof Date) || isNaN(date.getTime())) {
+            return "Fecha no válida";
+        }
+        
+        const options = { 
+            day: '2-digit', 
+            month: 'long', 
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        };
+        
+        return date.toLocaleDateString('es-ES', options);
+    }
+
+    // Función para obtener el texto del tipo de evento
+    function getEventTypeText(eventType) {
+        const typeMap = {
+            'GENERAL': 'Evento General',
+            'COURSE_START': 'Inicio de Curso',
+            'COURSE_END': 'Término de Curso',
+            'MILESTONE': 'Hito',
+            'ALERT': 'Alerta'
+        };
+        
+        return typeMap[eventType] || eventType;
+    }
+    
+    // Función para mostrar el modal de detalles del evento
+    function showEventDetails(item) {
+        if (!item || !item.event_id) return;
+        
+        // Almacenar datos del evento para uso posterior
+        currentEventData = item;
+        
+        // Configurar el modal de detalles
+        const modal = document.getElementById('eventDetailModal');
+        const iconContainer = document.getElementById('detail_event_icon_container');
+        const icon = document.getElementById('detail_event_icon');
+        
+        // Actualizar contenido del modal
+        document.getElementById('detail_event_name').textContent = item.title;
+        document.getElementById('detail_event_type').textContent = getEventTypeText(item.event_type);
+        document.getElementById('detail_event_date').textContent = formatDisplayDate(item.start);
+        
+        // Actualizar ícono y color
+        iconContainer.style.backgroundColor = item.event_color;
+        icon.className = 'fas ' + item.event_icon;
+        
+        // Mostrar el modal
+        const detailModal = new bootstrap.Modal(modal);
+        detailModal.show();
+        
+        // Configurar botones de acción
+        document.getElementById('btnEditEvent').onclick = function() {
+            detailModal.hide();
+            showEventEditForm(item);
+        };
+        
+        document.getElementById('btnDeleteEvent').onclick = function() {
+            detailModal.hide();
+            showEventDeleteConfirmation(item);
+        };
+    }
+    
+    // Función para mostrar el formulario de edición
+    function showEventEditForm(item) {
+        // Configurar formulario de edición
+        document.getElementById('edit_event_id').value = item.event_id;
+        document.getElementById('edit_title').value = item.title;
+        document.getElementById('edit_event_type').value = item.event_type;
+        document.getElementById('edit_event_date').value = formatDateTimeForInput(item.start);
+        document.getElementById('edit_color').value = item.event_color;
+        document.getElementById('edit_color_preview').style.backgroundColor = item.event_color;
+        document.getElementById('edit_icon').value = item.event_icon;
+        document.getElementById('edit_icon_preview').className = 'fas ' + item.event_icon;
+        
+        // Configurar acción de formulario
+        document.getElementById('editEventForm').action = `/meece/mpa/{{ mpa.id }}/timeline/event/${item.event_id}/update/`;
+        
+        // Mostrar modal de edición
+        const editModal = new bootstrap.Modal(document.getElementById('editEventModal'));
+        editModal.show();
+    }
+    
+    // Función para mostrar confirmación de eliminación
+    function showEventDeleteConfirmation(item) {
+        // Configurar formulario de eliminación
+        document.getElementById('delete_event_id').value = item.event_id;
+        document.getElementById('deleteEventForm').action = `/meece/mpa/{{ mpa.id }}/timeline/event/${item.event_id}/delete/`;
+        
+        // Mostrar modal de confirmación
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteEventModal'));
+        deleteModal.show();
+    }
+
+    // Función para crear un elemento de evento en el timeline
+    function createEventItem(event) {
+        const startDate = new Date(event.event_date);
+        
+        return {
+            id: 'event_' + event.id,
+            event_id: event.id,
+            start: startDate,
+            end: event.end_date ? new Date(event.end_date) : null,
+            type: 'box',
+            content: `
+                <div class="timeline-event" style="background-color: ${event.color};" title="${event.title}">
+                    <div class="event-content">
+                        <i class="fas ${event.icon}"></i>
+                        <div class="event-title">${event.title}</div>
+                    </div>
+                </div>
+            `,
+            className: 'timeline-custom-item',
+            title: event.title,
+            event_type: event.event_type,
+            event_color: event.color,
+            event_icon: event.icon
+        };
+    }
+
+    // Cargar datos del timeline
     try {
-        console.log('Iniciando carga de datos del timeline');
-
-        // Cargar datos de INTAKEs y cursos
-        {% for intake_data in timeline_data %}
-            {% with first_course=intake_data.courses|first %}
-            {% with last_course=intake_data.courses|last %}
-            
-            // Calcular espacio base para este grupo
-            var baseOrder = currentOrder * 10;
-
-            // Agregar INTAKE
-            items.add({
-                id: 'intake_{{ forloop.counter }}',
-                content: '<div class="intake-content">{{ intake_data.intake|escapejs }}</div>',
-                start: new Date('{{ first_course.start_date|date:"Y-m-d" }}'),
-                end: new Date('{{ last_course.end_date|date:"Y-m-d" }}'),
-                className: 'intake-line intake-' + ({{ forloop.counter0 }} % 4),
-                type: 'range',
-                order: baseOrder
-            });
-
-            // Agregar cursos del INTAKE
-            {% for course in intake_data.courses %}
-            items.add({
-                id: 'course_{{ course.id }}',
-                content: '<div class="course-content">{{ course.course_code|escapejs }} - {{ course.course_name|escapejs }}</div>',
-                start: new Date('{{ course.start_date|date:"Y-m-d" }}'),
-                end: new Date('{{ course.end_date|date:"Y-m-d" }}'),
-                className: 'course-line course-' + ({{ forloop.parentloop.counter0 }} % 4),
-                type: 'range',
-                order: baseOrder + {{ forloop.counter }}
-            });
-            {% endfor %}
-            
-            currentOrder++;
-            {% endwith %}
-            {% endwith %}
-        {% endfor %}
-
-        // Cargar eventos existentes
-        {% for event in timeline_events %}
-        items.add({
-            id: 'event_{{ event.id }}',
-            content: `<div class="event-content">
-                        <i class="fas {{ event.icon }}"></i> 
-                        <span class="event-title">{{ event.title|escapejs }}</span>
-                    </div>`,
-            start: new Date('{{ event.event_date|date:"Y-m-d H:i" }}'),
-            type: 'point',
-            className: 'timeline-event',
-            style: `background-color: {{ event.color }}; border-color: {{ event.color }};`,
-            order: -1
-        });
-        {% endfor %}
-
-        // Configuración del timeline
+        var timelineData = {{ timeline_data_json|safe }};
+        var eventsData = {{ timeline_events_json|safe }};
+        
+        // Configurar opciones del timeline
         var options = {
-            stack: false,
-            horizontalScroll: true,
-            verticalScroll: true,
-            zoomKey: 'ctrlKey',
             height: '100%',
-            min: new Date('{{ date_range.start|date:"Y-m-d" }}'),
-            max: new Date('{{ date_range.end|date:"Y-m-d" }}'),
-            start: new Date('{{ date_range.start|date:"Y-m-d" }}'),
-            end: new Date('{{ date_range.end|date:"Y-m-d" }}'),
-            margin: {
-                axis: 60,
-                item: {
-                    horizontal: 0,
-                    vertical: 10
-                }
-            },
-            orientation: {
-                axis: 'top',
-                item: 'top'
-            },
-            order: function(a, b) {
-                return a.order - b.order;
-            },
-            timeAxis: { 
-                scale: 'day',
-                step: 1
+            min: new Date(new Date().getFullYear() - 1, 0, 1),
+            max: new Date(new Date().getFullYear() + 2, 11, 31),
+            zoomMin: 1000 * 60 * 60 * 24 * 15, // 15 días
+            zoomMax: 1000 * 60 * 60 * 24 * 365 * 3, // 3 años
+            orientation: 'top',
+            stack: true,
+            stackSubgroups: true,
+            showCurrentTime: true,
+            tooltip: {
+                followMouse: true,
+                overflowMethod: 'cap'
             },
             format: {
                 minorLabels: {
                     day: 'D',
-                    weekday: 'ddd'
+                    month: 'MMM',
+                    year: 'YYYY'
                 },
                 majorLabels: {
                     day: 'MMMM YYYY',
-                    week: 'MMMM YYYY',
-                    month: 'YYYY',
-                    year: 'YYYY'
+                    month: 'YYYY'
                 }
-            },
-            showCurrentTime: true,
-            showMajorLabels: true,
-            showMinorLabels: true,
-            zoomMin: 1000 * 60 * 60 * 24 * 7,  // Una semana
-            zoomMax: 1000 * 60 * 60 * 24 * 365 * 2  // Dos años
+            }
         };
-
-        // Crear timeline
-        var timeline = new vis.Timeline(container, items, options);
-        console.log('Timeline creado exitosamente');
-
-        // Filtros
-        const intakeFilter = document.getElementById('intakeFilter');
-        const yearFilter = document.getElementById('yearFilter');
-
-        function filterItems() {
-            const selectedIntake = intakeFilter.value;
-            const selectedYear = yearFilter.value;
-            
-            items.forEach(item => {
-                let isVisible = true;
-                const itemDate = new Date(item.start);
-                const itemYear = itemDate.getFullYear().toString();
+        
+        // Procesar los datos de INTAKE para el timeline
+        if (timelineData && timelineData.length > 0) {
+            timelineData.forEach(function(data, index) {
+                var intakeColorIdx = index % 4; // 4 colores definidos en CSS
                 
-                if (selectedIntake && !item.id.includes(selectedIntake)) {
-                    isVisible = false;
+                // Agregar línea de INTAKE
+                items.add({
+                    id: 'intake_' + data.intake.replace(' ', '_'),
+                    content: '<div class="intake-content">' + data.intake + '</div>',
+                    start: new Date(data.start_date),
+                    end: new Date(data.end_date),
+                    type: 'range',
+                    className: 'intake-line intake-' + intakeColorIdx,
+                    order: currentOrder
+                });
+                
+                currentOrder += 1;
+                
+                // Agregar cursos para este INTAKE
+                if (data.courses && data.courses.length > 0) {
+                    data.courses.forEach(function(course) {
+                        items.add({
+                            id: 'course_' + course.id,
+                            content: '<div class="course-content">' + course.name + '</div>',
+                            start: new Date(course.start_date),
+                            end: new Date(course.end_date),
+                            type: 'range',
+                            className: 'course-line course-' + intakeColorIdx,
+                            order: currentOrder
+                        });
+                        
+                        currentOrder += 1;
+                    });
                 }
-                
-                if (selectedYear && itemYear !== selectedYear) {
-                    isVisible = false;
-                }
-                
-                items.update({ id: item.id, visible: isVisible });
             });
         }
-
-        if (intakeFilter) intakeFilter.addEventListener('change', filterItems);
-        if (yearFilter) yearFilter.addEventListener('change', filterItems);
-
-        // Navegación con teclado
-        document.addEventListener('keydown', function(e) {
-            const movePercentage = 0.2;
-            const currentWindow = timeline.getWindow();
-            const interval = currentWindow.end - currentWindow.start;
-            const step = interval * movePercentage;
-
-            switch(e.key) {
-                case 'ArrowLeft':
-                    timeline.setWindow(currentWindow.start - step, currentWindow.end - step);
-                    break;
-                case 'ArrowRight':
-                    timeline.setWindow(currentWindow.start + step, currentWindow.end + step);
-                    break;
+        
+        // Agregar eventos manuales
+        if (eventsData && eventsData.length > 0) {
+            eventsData.forEach(function(event) {
+                const eventItem = createEventItem(event);
+                items.add(eventItem);
+            });
+        }
+        
+        // Crear timeline
+        timeline = new vis.Timeline(container, items, options);
+        
+        // Eventos y handlers
+        timeline.on('click', function(properties) {
+            var item = items.get(properties.item);
+            if (item && item.event_id) {
+                showEventDetails(item);
             }
         });
-
-        // Navegación con botones
-        document.querySelector('.nav-arrows.left').onclick = () => {
-            const currentWindow = timeline.getWindow();
-            const interval = currentWindow.end - currentWindow.start;
-            timeline.setWindow(currentWindow.start - interval * 0.2, currentWindow.end - interval * 0.2);
-        };
-
-        document.querySelector('.nav-arrows.right').onclick = () => {
-            const currentWindow = timeline.getWindow();
-            const interval = currentWindow.end - currentWindow.start;
-            timeline.setWindow(currentWindow.start + interval * 0.2, currentWindow.end + interval * 0.2);
-        };
-
-        // Zoom controls
-        document.querySelector('.zoom-in').onclick = () => timeline.zoomIn(0.5);
-        document.querySelector('.zoom-out').onclick = () => timeline.zoomOut(0.5);
-        document.querySelector('.move-today').onclick = () => timeline.moveTo(new Date());
-
-        // Formulario de eventos
-        const eventForm = document.getElementById('eventForm');
-        if (eventForm) {
-            eventForm.addEventListener('submit', function(e) {
-                e.preventDefault();
+        
+        // Handlers para los controles de navegación
+        document.querySelector('.nav-arrows.left').addEventListener('click', function() {
+            timeline.move({ scale: 0.7 });
+        });
+        
+        document.querySelector('.nav-arrows.right').addEventListener('click', function() {
+            timeline.move({ scale: 0.7 });
+        });
+        
+        document.querySelector('.zoom-controls .zoom-in').addEventListener('click', function() {
+            timeline.zoomIn(0.5);
+        });
+        
+        document.querySelector('.zoom-controls .zoom-out').addEventListener('click', function() {
+            timeline.zoomOut(0.5);
+        });
+        
+        document.querySelector('.zoom-controls .move-today').addEventListener('click', function() {
+            timeline.moveTo(new Date());
+        });
+        
+        // Handlers para los filtros
+        document.getElementById('intakeFilter').addEventListener('change', function() {
+            applyFilters();
+        });
+        
+        document.getElementById('yearFilter').addEventListener('change', function() {
+            applyFilters();
+        });
+        
+        // Función para aplicar filtros
+        function applyFilters() {
+            const intakeFilter = document.getElementById('intakeFilter').value;
+            const yearFilter = document.getElementById('yearFilter').value;
+            
+            // Filtrar los items basados en las selecciones
+            items.forEach(function(item) {
+                let visible = true;
                 
-                fetch(this.action, {
-                    method: 'POST',
-                    body: new FormData(this),
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
+                if (item.id.startsWith('intake_') && intakeFilter && !item.id.includes(intakeFilter.replace(' ', '_'))) {
+                    visible = false;
+                }
+                
+                if (yearFilter && item.start && !item.id.startsWith('event_')) {
+                    const itemYear = new Date(item.start).getFullYear().toString();
+                    if (itemYear !== yearFilter) {
+                        visible = false;
                     }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Agregar nuevo evento al timeline
-                        items.add({
-                            id: `event_${data.event.id}`,
-                            content: `<div class="event-content">
-                                        <i class="fas ${data.event.icon}"></i> 
-                                        <span class="event-title">${data.event.title}</span>
-                                    </div>`,
-                            start: new Date(data.event.start),
-                            type: 'point',
-                            className: 'timeline-event',
-                            style: `background-color: ${data.event.color}; border-color: ${data.event.color};`,
-                            order: -1
-                        });
-
-                        // Cerrar modal y limpiar formulario
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('eventModal'));
-                        modal.hide();
-                        eventForm.reset();
-
-                        // Mostrar mensaje de éxito
-                        alert('Evento creado exitosamente');
-                    } else {
-                        // Mostrar errores en los campos
-                        Object.keys(data.errors).forEach(field => {
-                            const input = document.getElementById(`id_${field}`);
-                            if (input) {
-                                input.classList.add('is-invalid');
-                                const feedback = input.nextElementSibling;
-                                if (feedback) {
-                                    feedback.textContent = data.errors[field][0];
-                                }
+                }
+                
+                item.visible = visible;
+            });
+            
+            // Actualizar visualización
+            timeline.setItems(items);
+        }
+        
+        // Handlers para los formularios
+        document.getElementById('eventForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Recolectar datos del formulario
+            const formData = new FormData(this);
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            
+            // Enviar datos al servidor
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Cerrar modal y mostrar mensaje de éxito
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('eventModal'));
+                    modal.hide();
+                    
+                    // Agregar el nuevo evento al timeline
+                    const eventItem = createEventItem(data.event);
+                    items.add(eventItem);
+                    
+                    // Mostrar mensaje de éxito
+                    showToast('Evento creado con éxito');
+                    
+                    // Resetear el formulario
+                    this.reset();
+                } else {
+                    // Mostrar errores de validación
+                    Object.entries(data.errors).forEach(([field, messages]) => {
+                        const input = this.querySelector(`[name="${field}"]`);
+                        if (input) {
+                            input.classList.add('is-invalid');
+                            const feedback = input.nextElementSibling;
+                            if (feedback && feedback.classList.contains('invalid-feedback')) {
+                                feedback.textContent = messages[0];
                             }
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error al procesar la solicitud');
-                });
+                        }
+                    });
+                    
+                    showToast('Hubo errores en el formulario. Por favor revisa los campos.', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Ocurrió un error. Intenta nuevamente.', 'danger');
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+            });
+        });
+        
+        document.getElementById('editEventForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Recolectar datos del formulario
+            const formData = new FormData(this);
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            
+            // Enviar datos al servidor
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Cerrar modal y mostrar mensaje de éxito
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editEventModal'));
+                    modal.hide();
+                    
+                    // Actualizar el evento en el timeline
+                    const eventId = 'event_' + data.event.id;
+                    items.remove(eventId);
+                    const eventItem = createEventItem(data.event);
+                    items.add(eventItem);
+                    
+                    // Mostrar mensaje de éxito
+                    showToast('Evento actualizado con éxito');
+                } else {
+                    // Mostrar errores de validación
+                    Object.entries(data.errors).forEach(([field, messages]) => {
+                        const input = this.querySelector(`[name="${field}"]`);
+                        if (input) {
+                            input.classList.add('is-invalid');
+                            const feedback = input.nextElementSibling;
+                            if (feedback && feedback.classList.contains('invalid-feedback')) {
+                                feedback.textContent = messages[0];
+                            }
+                        }
+                    });
+                    
+                    showToast('Hubo errores en el formulario. Por favor revisa los campos.', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Ocurrió un error. Intenta nuevamente.', 'danger');
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+            });
+        });
+        
+        document.getElementById('deleteEventForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Recolectar datos del formulario
+            const formData = new FormData(this);
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            
+            // Enviar datos al servidor
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Cerrar modal y mostrar mensaje de éxito
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('deleteEventModal'));
+                    modal.hide();
+                    
+                    // Eliminar el evento del timeline
+                    const eventId = 'event_' + data.event_id;
+                    items.remove(eventId);
+                    
+                    // Mostrar mensaje de éxito
+                    showToast('Evento eliminado con éxito');
+                } else {
+                    showToast('No se pudo eliminar el evento. ' + (data.message || 'Intenta nuevamente.'), 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Ocurrió un error. Intenta nuevamente.', 'danger');
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+            });
+        });
+        
+        // Configurar vistas previas en formularios
+        const colorInput = document.querySelector('#eventForm input[type="color"]');
+        const colorPreview = document.querySelector('#eventForm .color-preview');
+        const iconSelect = document.querySelector('#eventForm select[name="icon"]');
+        const iconPreview = document.querySelector('#eventForm .icon-preview i');
+        
+        if (colorInput && colorPreview) {
+            colorPreview.style.backgroundColor = colorInput.value;
+            colorInput.addEventListener('input', function() {
+                colorPreview.style.backgroundColor = this.value;
             });
         }
-
-        // Vista inicial
-        var initialStart = new Date();
-        var initialEnd = new Date();
-        initialEnd.setMonth(initialEnd.getMonth() + 4);
-        timeline.setWindow(initialStart, initialEnd);
-
+        
+        if (iconSelect && iconPreview) {
+            iconPreview.className = 'fas ' + iconSelect.value;
+            iconSelect.addEventListener('change', function() {
+                iconPreview.className = 'fas ' + this.value;
+            });
+        }
+        
+        // Configurar vistas previas en formulario de edición
+        const editColorInput = document.querySelector('#editEventForm input[type="color"]');
+        const editColorPreview = document.querySelector('#edit_color_preview');
+        const editIconSelect = document.querySelector('#editEventForm select[name="icon"]');
+        const editIconPreview = document.querySelector('#edit_icon_preview');
+        
+        if (editColorInput && editColorPreview) {
+            editColorInput.addEventListener('input', function() {
+                editColorPreview.style.backgroundColor = this.value;
+            });
+        }
+        
+        if (editIconSelect && editIconPreview) {
+            editIconSelect.addEventListener('change', function() {
+                editIconPreview.className = 'fas ' + this.value;
+            });
+        }
+        
+        // Ajustar timeline al iniciar
+        setTimeout(function() {
+            if (timeline) {
+                timeline.redraw();
+                timeline.fit();
+            }
+        }, 100);
     } catch (error) {
-        console.error("Error al crear timeline:", error);
-        if (container) {
-            container.innerHTML = '<div class="alert alert-danger m-3">Error al cargar el timeline: ' + error.message + '</div>';
-        }
-    }
-
-    // Preview de color e ícono
-    const colorInput = document.getElementById('id_color');
-    const colorPreview = document.querySelector('.color-preview');
-    const iconInput = document.getElementById('id_icon');
-    const iconPreview = document.querySelector('.icon-preview i');
-
-    if (colorInput && colorPreview) {
-        colorInput.addEventListener('input', function() {
-            colorPreview.style.backgroundColor = this.value;
-        });
-        // Inicializar color preview
-        colorPreview.style.backgroundColor = colorInput.value;
-    }
-
-    if (iconInput && iconPreview) {
-        iconInput.addEventListener('change', function() {
-            iconPreview.className = 'fas ' + this.value;
-        });
-        // Inicializar icon preview
-        if (iconInput.value) {
-            iconPreview.className = 'fas ' + iconInput.value;
-        }
+        console.error('Error inicializando timeline:', error);
+        container.innerHTML = '<div class="alert alert-danger m-3">Error inicializando el timeline: ' + error.message + '</div>';
     }
 });
 </script>

@@ -74,5 +74,7 @@ urlpatterns = [
     # urls.py
     path('mpa/<int:mpa_id>/timeline/', views.MPATimelineView.as_view(), name='mpa_timeline'),
     path('mpa/<int:mpa_id>/timeline/event/create/', views.TimelineEventCreateView.as_view(), name='timeline_event_create'),
+    path('mpa/<int:mpa_id>/timeline/event/<int:event_id>/update/', views.TimelineEventUpdateView.as_view(), name='timeline_event_update'),
+path('mpa/<int:mpa_id>/timeline/event/<int:event_id>/delete/', views.TimelineEventDeleteView.as_view(), name='timeline_event_delete'),
 ]
 

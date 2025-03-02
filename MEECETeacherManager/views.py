@@ -1532,43 +1532,86 @@ class MPATimelineView(TemplateView):
                 sheet__mpa=mpa
             ).select_related('sheet').order_by('start_date')
             
+            # Establecer fechas por defecto en caso de que no haya datos
+            default_start = timezone.now().date()
+            default_end = default_start + timedelta(days=120)  # 4 meses
+            
             if not all_schedules.exists():
                 context['error'] = "No hay datos de horarios para mostrar"
+                context['timeline_data'] = []
+                context['timeline_events'] = []
+                context['years'] = [default_start.year, default_end.year]
+                context['date_range'] = {
+                    'start': default_start,
+                    'end': default_end
+                }
+                context['form'] = TimelineEventForm()
                 return context
 
             # Obtener años únicos
             years_set = set()
             for schedule in all_schedules:
-                years_set.add(schedule.start_date.year)
-                years_set.add(schedule.end_date.year)
+                if schedule.start_date:
+                    years_set.add(schedule.start_date.year)
+                if schedule.end_date:
+                    years_set.add(schedule.end_date.year)
+            
+            # Si no hay años válidos, usar el año actual
+            if not years_set:
+                years_set = {default_start.year}
+                
             years = sorted(list(years_set))
                 
             # Calcular rango de fechas
-            date_range = {
-                'start': all_schedules.first().start_date,
-                'end': all_schedules.last().end_date
-            }
+            try:
+                # Intentar obtener la primera y última fecha
+                first_schedule = all_schedules.first()
+                last_schedule = all_schedules.last()
+                
+                if first_schedule and first_schedule.start_date and last_schedule and last_schedule.end_date:
+                    date_range = {
+                        'start': first_schedule.start_date,
+                        'end': last_schedule.end_date
+                    }
+                else:
+                    # Si alguna fecha es None, usar fechas por defecto
+                    date_range = {
+                        'start': default_start,
+                        'end': default_end
+                    }
+            except (AttributeError, TypeError):
+                # En caso de error, usar fechas por defecto
+                date_range = {
+                    'start': default_start,
+                    'end': default_end
+                }
             
             # Organizar datos por INTAKE
             for sheet in mpa.sheets.all():
                 sheet_schedules = sheet.schedules.all().order_by('start_date')
                 if sheet_schedules.exists():
-                    timeline_data.append({
-                        'intake': sheet.intake,
-                        'courses': [{
-                            'id': schedule.id,
-                            'course_code': schedule.course_code,
-                            'course_name': schedule.course_name,
-                            'teacher_name': schedule.teacher_name,
-                            'start_date': schedule.start_date,
-                            'end_date': schedule.end_date,
-                        } for schedule in sheet_schedules]
-                    })
+                    # Filtrar horarios con fechas válidas
+                    valid_schedules = []
+                    for schedule in sheet_schedules:
+                        if schedule.start_date and schedule.end_date:
+                            valid_schedules.append({
+                                'id': schedule.id,
+                                'course_code': schedule.course_code,
+                                'course_name': schedule.course_name,
+                                'teacher_name': schedule.teacher_name,
+                                'start_date': schedule.start_date,
+                                'end_date': schedule.end_date,
+                            })
+                    
+                    if valid_schedules:  # Solo agregar si hay horarios válidos
+                        timeline_data.append({
+                            'intake': sheet.intake,
+                            'courses': valid_schedules
+                        })
             
             # Obtener eventos del timeline
             timeline_events = TimelineEvent.objects.filter(
-                mpa=mpa,
-                is_visible=True
+                mpa=mpa
             ).order_by('event_date')
             
             context.update({
@@ -1581,8 +1624,26 @@ class MPATimelineView(TemplateView):
             
         except MPA.DoesNotExist:
             context['error'] = "MPA no encontrado"
+            # Establecer valores por defecto
+            context['timeline_data'] = []
+            context['timeline_events'] = []
+            context['years'] = [timezone.now().year]
+            context['date_range'] = {
+                'start': timezone.now().date(),
+                'end': timezone.now().date() + timedelta(days=120)
+            }
+            context['form'] = TimelineEventForm()
         except Exception as e:
             context['error'] = f"Error: {str(e)}"
+            # Establecer valores por defecto
+            context['timeline_data'] = []
+            context['timeline_events'] = []
+            context['years'] = [timezone.now().year]
+            context['date_range'] = {
+                'start': timezone.now().date(),
+                'end': timezone.now().date() + timedelta(days=120)
+            }
+            context['form'] = TimelineEventForm()
             
         return context
 
@@ -1603,7 +1664,7 @@ class TimelineEventCreateView(LoginRequiredMixin, View):
                     'id': event.id,
                     'title': event.title,
                     'start': event.event_date.isoformat(),
-                    'type': event.event_type,
+                    'event_type': event.event_type,
                     'color': event.color,
                     'icon': event.icon
                 }
@@ -1612,33 +1673,58 @@ class TimelineEventCreateView(LoginRequiredMixin, View):
         return JsonResponse({
             'success': False,
             'errors': form.errors
-        }, status=400)
+        })
 
-class TimelineEventCreateView(LoginRequiredMixin, View):
-    def post(self, request, mpa_id):
+class TimelineEventUpdateView(LoginRequiredMixin, View):
+    def post(self, request, mpa_id, event_id):
         mpa = get_object_or_404(MPA, id=mpa_id)
-        form = TimelineEventForm(request.POST)
+        event = get_object_or_404(TimelineEvent, id=event_id, mpa=mpa)
         
-        if form.is_valid():
-            event = form.save(commit=False)
-            event.mpa = mpa
-            event.created_by = request.user
-            event.save()
-            
+        # Obtener datos del formulario
+        title = request.POST.get('title')
+        event_type = request.POST.get('event_type')
+        event_date = request.POST.get('event_date')
+        color = request.POST.get('color')
+        icon = request.POST.get('icon')
+        
+        if not all([title, event_type, event_date]):
             return JsonResponse({
-                'success': True,
-                'event': {
-                    'id': event.id,
-                    'title': event.title,
-                    'start': event.event_date.isoformat(),
-                    'end': event.end_date.isoformat() if event.end_date else None,
-                    'type': event.event_type,
-                    'color': event.color,
-                    'icon': event.icon
+                'success': False,
+                'errors': {
+                    'title': ['Este campo es obligatorio'] if not title else [],
+                    'event_type': ['Este campo es obligatorio'] if not event_type else [],
+                    'event_date': ['Este campo es obligatorio'] if not event_date else []
                 }
             })
         
+        # Actualizar el evento
+        event.title = title
+        event.event_type = event_type
+        event.event_date = event_date
+        event.color = color
+        event.icon = icon
+        event.save()
+        
         return JsonResponse({
-            'success': False,
-            'errors': form.errors
-        }, status=400)
+            'success': True,
+            'event': {
+                'id': event.id,
+                'title': event.title,
+                'start': event.event_date.isoformat(),
+                'event_type': event.event_type,
+                'color': event.color,
+                'icon': event.icon
+            }
+        })
+
+class TimelineEventDeleteView(LoginRequiredMixin, View):
+    def post(self, request, mpa_id, event_id):
+        mpa = get_object_or_404(MPA, id=mpa_id)
+        event = get_object_or_404(TimelineEvent, id=event_id, mpa=mpa)
+        
+        # Eliminar el evento
+        event.delete()
+        
+        return JsonResponse({
+            'success': True
+        })

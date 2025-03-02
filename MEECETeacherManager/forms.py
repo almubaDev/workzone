@@ -194,6 +194,8 @@ class MPAEditForm(forms.ModelForm):
 
 
 # forms.py
+# TimelineEventForm corregido para incluir en MEECETeacherManager/forms.py
+
 class TimelineEventForm(forms.ModelForm):
     class Meta:
         model = TimelineEvent
@@ -217,5 +219,11 @@ class TimelineEventForm(forms.ModelForm):
             }),
             'icon': forms.Select(attrs={
                 'class': 'form-select'
-            }, choices=TimelineEvent.ICON_CHOICES)
+            })
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk and self.instance.event_date:
+            # Formatear la fecha para el widget datetime-local
+            self.initial['event_date'] = self.instance.event_date.strftime('%Y-%m-%dT%H:%M')

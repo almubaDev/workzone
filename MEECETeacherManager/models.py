@@ -350,6 +350,8 @@ class MPASchedule(models.Model):
     
     
     
+# Este es el modelo TimelineEvent corregido que debes incluir en MEECETeacherManager/models.py
+
 class TimelineEvent(models.Model):
     EVENT_TYPES = [
         ('GENERAL', 'Evento General'),
@@ -376,3 +378,9 @@ class TimelineEvent(models.Model):
     icon = models.CharField("Ícono", max_length=50, choices=ICON_CHOICES, blank=True)
     mpa = models.ForeignKey(MPA, on_delete=models.CASCADE)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    is_visible = models.BooleanField("Visible", default=True)  # Añadido para controlar la visibilidad
+    created_at = models.DateTimeField(auto_now_add=True)  # Añadido para seguimiento de creación
+    updated_at = models.DateTimeField(auto_now=True)  # Añadido para seguimiento de actualizaciones
+
+    def __str__(self):
+        return f"{self.title} ({self.event_date.strftime('%d/%m/%Y')})"
